@@ -1,39 +1,51 @@
-import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../data/repo/auth_repo.dart';
+import 'auth_states.dart';
 
-class AuthViewModel extends ChangeNotifier {
-  // Form controllers
-  final emailController = TextEditingController();
-  final passwordController = TextEditingController();
-  final nameController = TextEditingController();
-  final confirmPasswordController = TextEditingController();
+class AuthCubit extends Cubit<AuthState> {
+  final AuthRepo repo;
 
-  // State
-  bool _isLoading = false;
-  String? _errorMessage;
+  AuthCubit(this.repo) : super(AuthInitial());
 
-  bool get isLoading => _isLoading;
-  String? get errorMessage => _errorMessage;
+  /// LOGIN
+  Future<void> login({
+    required String email,
+    required String password,
+  }) async {
+    emit(LoginLoading());
 
-  // No logic – just UI state stubs
-  void login() {
-    // TODO: Implement login logic
+    final result = await repo.signIn(
+      email: email,
+      password: password,
+    );
+
+    result.fold(
+      (error) => emit(LoginFailure(error)),
+      (_) => emit(LoginSuccess()),
+    );
   }
 
-  void register() {
-    // TODO: Implement register logic
+  /// REGISTER
+  Future<void> register({
+    required String email,
+    required String password,
+  }) async {
+    emit(SignUpLoading());
+
+    final result = await repo.signUp(
+      email: email,
+      password: password,
+    );
+
+    result.fold(
+      (error) => emit(SignUpFailure(error)),
+      (_) => emit(SignUpSuccess()),
+    );
   }
 
-  void clearError() {
-    _errorMessage = null;
-    notifyListeners();
-  }
-
-  @override
-  void dispose() {
-    emailController.dispose();
-    passwordController.dispose();
-    nameController.dispose();
-    confirmPasswordController.dispose();
-    super.dispose();
+  /// LOGOUT
+  Future<void> logout() async {
+    await repo.logout();
+    emit(AuthInitial());
   }
 }

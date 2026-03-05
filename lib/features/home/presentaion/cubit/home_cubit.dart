@@ -1,36 +1,49 @@
+import 'package:bloc/bloc.dart';
 import 'package:e_learning/features/courses/data/model/courses.dart';
-import 'package:flutter/material.dart';
-class HomeViewModel extends ChangeNotifier {
-  List<CourseModel> _allCourses = MockData.courses;
-  List<CourseModel> _filteredCourses = MockData.courses;
-  String _selectedCategory = 'All';
-  String _searchQuery = '';
+import 'package:e_learning/features/courses/data/repo/course_repo.dart';
+import 'package:e_learning/features/home/presentaion/cubit/home_states.dart';
 
-  List<CourseModel> get courses => _filteredCourses;
-  String get selectedCategory => _selectedCategory;
+class HomeCubit extends Cubit<HomeState> {
+  final CoursesRepo repo;
+  HomeCubit(this.repo) : super(HomeInitial());
 
-  final List<String> categories = [
-    'All',
-    'Mobile Dev',
-    'Web Dev',
-    'Design',
-    'Data Science',
-    'AI & ML',
-  ];
-
-  void onSearchChanged(String query) {
-    _searchQuery = query;
-    _applyFilters();
+  Future<void> fetchCourses() async {
+    emit(HomeLoading());
+    try {
+      final courses = await repo.fetchCourses();
+      final featured = courses.where((c) => c.isFeatured).toList();
+      emit(HomeLoaded(
+        courses: courses,
+        featuredCourses: featured,
+        selectedCategory: 'All',
+        searchQuery: '',
+      ));
+    } catch (e) {
+      emit(HomeError(e.toString()));
+    }
   }
 
-  void onCategorySelected(String category) {
-    _selectedCategory = category;
-    _applyFilters();
-    notifyListeners();
+  void selectCategory(String category) {
+    if (state is HomeLoaded) {
+      emit((state as HomeLoaded).copyWith(selectedCategory: category));
+    }
   }
 
-  void _applyFilters() {
-    // TODO: Implement filter logic
-    notifyListeners();
+  void searchCourses(String query) {
+    if (state is HomeLoaded) {
+      emit((state as HomeLoaded).copyWith(searchQuery: query));
+    }
+  }
+
+  List<CourseModel> get filteredCourses {
+    if (state is! HomeLoaded) return [];
+    final s = state as HomeLoaded;
+    return s.courses.where((c) {
+      final matchCat =
+          s.selectedCategory == 'All' || c.category == s.selectedCategory;
+      final matchSearch =
+          c.title.toLowerCase().contains(s.searchQuery.toLowerCase());
+      return matchCat && matchSearch;
+    }).toList();
   }
 }

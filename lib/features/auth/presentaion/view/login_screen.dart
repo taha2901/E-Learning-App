@@ -40,7 +40,9 @@ class _LoginScreenState extends State<LoginScreen> {
           if (state is LoginSuccess) {
             Navigator.pushReplacement(
               context,
-              MaterialPageRoute(builder: (_) => const MainShell()),
+              MaterialPageRoute(
+                builder: (_) => MainShell(userId: state.userId),
+              ),
             );
           }
 
@@ -63,7 +65,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const SizedBox(height: 48),
-                    // const _BrandHeader(),
+                    const _BrandHeader(),
                     const SizedBox(height: 40),
 
                     Text('Welcome back 👋', style: AppTextStyles.displayMedium),
@@ -125,33 +127,44 @@ class _LoginScreenState extends State<LoginScreen> {
                           );
                         }
 
-                        return state is LoginSuccess
-                            ? const Center(child: CircularProgressIndicator())
-                            : AppPrimaryButton(
-                                label: 'Sign In',
-                                onTap: () {
-                                  if (_formKey.currentState!.validate()) {
-                                    context.read<AuthCubit>().login(
-                                      email: emailController.text.trim(),
-                                      password: passwordController.text.trim(),
-                                    );
-                                  }
-                                },
+                        return AppPrimaryButton(
+                          label: 'Sign In',
+                          onTap: () {
+                            if (_formKey.currentState!.validate()) {
+                              context.read<AuthCubit>().login(
+                                email: emailController.text.trim(),
+                                password: passwordController.text.trim(),
                               );
+                            }
+                          },
+                        );
                       },
                     ),
 
                     const SizedBox(height: 32),
 
-                    // const _OrDivider(),
+                    /// OR Divider
+                    const _OrDivider(),
                     const SizedBox(height: 32),
 
+                    // Social Login
+                    _SocialLoginButton(
+                      icon: Icons.g_mobiledata_rounded,
+                      label: 'Continue with Google',
+                      onTap: () {},
+                    ),
+
+                    const SizedBox(height: 40),
+
+                    // Register Link
                     Center(
                       child: GestureDetector(
                         onTap: () {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (_) =>  const RegisterScreen()),
+                            MaterialPageRoute(
+                              builder: (_) => const RegisterScreen(),
+                            ),
                           );
                         },
                         child: RichText(
@@ -178,6 +191,92 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+class _BrandHeader extends StatelessWidget {
+  const _BrandHeader();
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          width: 48,
+          height: 48,
+          decoration: BoxDecoration(
+            gradient: AppColors.primaryGradient,
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: const Icon(Icons.school_rounded, color: Colors.white, size: 26),
+        ),
+        const SizedBox(width: 12),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              AppConstants.appName,
+              style: AppTextStyles.h1.copyWith(color: AppColors.primary),
+            ),
+            Text(AppConstants.appTagline, style: AppTextStyles.caption),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _OrDivider extends StatelessWidget {
+  const _OrDivider();
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        const Expanded(child: Divider(color: AppColors.cardBorder)),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Text('or', style: AppTextStyles.bodySmall),
+        ),
+        const Expanded(child: Divider(color: AppColors.cardBorder)),
+      ],
+    );
+  }
+}
+
+class _SocialLoginButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  const _SocialLoginButton({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        height: 54,
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(AppConstants.radiusL),
+          border: Border.all(color: AppColors.cardBorder),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: AppColors.textPrimary, size: 26),
+            const SizedBox(width: 10),
+            Text(label,
+                style: AppTextStyles.labelMedium
+                    .copyWith(color: AppColors.textPrimary)),
+          ],
         ),
       ),
     );

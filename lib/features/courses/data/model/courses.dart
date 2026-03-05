@@ -1,52 +1,90 @@
-// ─────────────────────────────────────────────
-// Course Model
-// ─────────────────────────────────────────────
 class CourseModel {
   final String id;
   final String title;
-  final String instructor;
-  final String description;
-  final String thumbnailUrl;
   final String category;
+  final String instructor;
+  final String thumbnailUrl;
+  final String description;
   final double rating;
   final int studentsCount;
   final int lessonsCount;
   final String duration;
   final String level;
   final bool isEnrolled;
+  final bool isFeatured;
   final List<VideoModel> videos;
 
-  const CourseModel({
+  CourseModel({
     required this.id,
     required this.title,
-    required this.instructor,
-    required this.description,
-    required this.thumbnailUrl,
     required this.category,
+    required this.instructor,
+    required this.thumbnailUrl,
+    required this.description,
     required this.rating,
     required this.studentsCount,
     required this.lessonsCount,
     required this.duration,
     required this.level,
     this.isEnrolled = false,
-    this.videos = const [],
+    this.isFeatured = false,
+    required this.videos,
   });
 
-  CourseModel copyWith({bool? isEnrolled}) {
+  // ✅ copyWith عشان نقدر نضيف الـ videos بعدين
+  CourseModel copyWith({
+    String? id,
+    String? title,
+    String? category,
+    String? instructor,
+    String? thumbnailUrl,
+    String? description,
+    double? rating,
+    int? studentsCount,
+    int? lessonsCount,
+    String? duration,
+    String? level,
+    bool? isEnrolled,
+    bool? isFeatured,
+    List<VideoModel>? videos,
+  }) {
     return CourseModel(
-      id: id,
-      title: title,
-      instructor: instructor,
-      description: description,
-      thumbnailUrl: thumbnailUrl,
-      category: category,
-      rating: rating,
-      studentsCount: studentsCount,
-      lessonsCount: lessonsCount,
-      duration: duration,
-      level: level,
+      id: id ?? this.id,
+      title: title ?? this.title,
+      category: category ?? this.category,
+      instructor: instructor ?? this.instructor,
+      thumbnailUrl: thumbnailUrl ?? this.thumbnailUrl,
+      description: description ?? this.description,
+      rating: rating ?? this.rating,
+      studentsCount: studentsCount ?? this.studentsCount,
+      lessonsCount: lessonsCount ?? this.lessonsCount,
+      duration: duration ?? this.duration,
+      level: level ?? this.level,
       isEnrolled: isEnrolled ?? this.isEnrolled,
-      videos: videos,
+      isFeatured: isFeatured ?? this.isFeatured,
+      videos: videos ?? this.videos,
+    );
+  }
+
+  factory CourseModel.fromJson(Map<String, dynamic> json) {
+    return CourseModel(
+      id: json['id'],
+      title: json['title'],
+      category: json['category'],
+      instructor: json['instructor'],
+      thumbnailUrl: json['thumbnail_url'],
+      description: json['description'],
+      rating: (json['rating'] as num).toDouble(),
+      studentsCount: json['students_count'],
+      lessonsCount: json['lessons_count'],
+      duration: json['duration'],
+      level: json['level'],
+      isEnrolled: json['is_enrolled'] ?? false,
+      isFeatured: json['is_featured'] ?? false,
+      // ✅ لو الـ videos جت مع الـ JSON خذها، لو لأ ابدأ بـ list فاضية
+      videos: (json['videos'] as List<dynamic>? ?? [])
+          .map((v) => VideoModel.fromJson(v as Map<String, dynamic>))
+          .toList(),
     );
   }
 }
@@ -56,203 +94,40 @@ class CourseModel {
 // ─────────────────────────────────────────────
 class VideoModel {
   final String id;
+  final String courseId;
   final String title;
   final String duration;
   final String videoUrl;
-  final bool isWatched;
   final bool isLocked;
+  final bool isWatched;
 
-  const VideoModel({
+  VideoModel({
     required this.id,
+    required this.courseId,
     required this.title,
     required this.duration,
     required this.videoUrl,
-    this.isWatched = false,
-    this.isLocked = false,
+    required this.isLocked,
+    required this.isWatched,
   });
-}
 
-// ─────────────────────────────────────────────
-// User Model
-// ─────────────────────────────────────────────
-class UserModel {
-  final String id;
-  final String name;
-  final String email;
-  final String avatarUrl;
-  final String bio;
-  final int enrolledCoursesCount;
-  final int completedCoursesCount;
-  final int certificatesCount;
+  factory VideoModel.fromJson(Map<String, dynamic> json) => VideoModel(
+        id: json['id'],
+        courseId: json['course_id'],
+        title: json['title'] ?? '',
+        duration: json['duration'] ?? '',
+        videoUrl: json['video_url'] ?? '',
+        isLocked: json['is_locked'] ?? false,
+        isWatched: json['is_watched'] ?? false,
+      );
 
-  const UserModel({
-    required this.id,
-    required this.name,
-    required this.email,
-    required this.avatarUrl,
-    required this.bio,
-    required this.enrolledCoursesCount,
-    required this.completedCoursesCount,
-    required this.certificatesCount,
-  });
-}
-
-
-
-class MockData {
-  // ── Videos ──────────────────────────────────
-  static List<VideoModel> sampleVideos = const [
-    VideoModel(
-      id: 'v1',
-      title: 'Introduction & Course Overview',
-      duration: '5:30',
-      videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
-      isWatched: true,
-      isLocked: false,
-    ),
-    VideoModel(
-      id: 'v2',
-      title: 'Setting Up Your Environment',
-      duration: '12:45',
-      videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4',
-      isWatched: true,
-      isLocked: false,
-    ),
-    VideoModel(
-      id: 'v3',
-      title: 'Core Concepts Explained',
-      duration: '18:20',
-      videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
-      isWatched: false,
-      isLocked: false,
-    ),
-    VideoModel(
-      id: 'v4',
-      title: 'Building Your First Project',
-      duration: '25:10',
-      videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4',
-      isWatched: false,
-      isLocked: true,
-    ),
-    VideoModel(
-      id: 'v5',
-      title: 'Advanced Techniques',
-      duration: '30:00',
-      videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/SubaruOutbackOnStreetAndDirt.mp4',
-      isWatched: false,
-      isLocked: true,
-    ),
-  ];
-
-  // ── Courses ──────────────────────────────────
-  static List<CourseModel> courses = [
-    CourseModel(
-      id: 'c1',
-      title: 'Flutter & Dart – The Complete Guide',
-      instructor: 'Ahmed Kamal',
-      description:
-          'Master Flutter from scratch. Build beautiful cross-platform apps for iOS and Android with real-world projects and hands-on practice.',
-      thumbnailUrl: 'https://picsum.photos/seed/flutter/400/220',
-      category: 'Mobile Dev',
-      rating: 4.8,
-      studentsCount: 12400,
-      lessonsCount: 42,
-      duration: '28h 30m',
-      level: 'Beginner',
-      isEnrolled: true,
-      videos: sampleVideos,
-    ),
-    CourseModel(
-      id: 'c2',
-      title: 'UI/UX Design Fundamentals',
-      instructor: 'Sara Hassan',
-      description:
-          'Learn the principles of great UX design. Create wireframes, prototypes, and user flows that delight users and achieve business goals.',
-      thumbnailUrl: 'https://picsum.photos/seed/uiux/400/220',
-      category: 'Design',
-      rating: 4.9,
-      studentsCount: 8200,
-      lessonsCount: 30,
-      duration: '18h 45m',
-      level: 'Intermediate',
-      isEnrolled: false,
-      videos: sampleVideos,
-    ),
-    CourseModel(
-      id: 'c3',
-      title: 'Python for Data Science',
-      instructor: 'Omar Youssef',
-      description:
-          'Dive into data science using Python. Explore pandas, matplotlib, scikit-learn, and real datasets to build powerful analytical skills.',
-      thumbnailUrl: 'https://picsum.photos/seed/python/400/220',
-      category: 'Data Science',
-      rating: 4.7,
-      studentsCount: 15600,
-      lessonsCount: 55,
-      duration: '35h 00m',
-      level: 'Beginner',
-      isEnrolled: true,
-      videos: sampleVideos,
-    ),
-    CourseModel(
-      id: 'c4',
-      title: 'React.js – Build Modern Web Apps',
-      instructor: 'Mona Tarek',
-      description:
-          'Go from zero to hero with React. Build production-ready web applications using hooks, Redux, and modern JS patterns.',
-      thumbnailUrl: 'https://picsum.photos/seed/react/400/220',
-      category: 'Web Dev',
-      rating: 4.6,
-      studentsCount: 9800,
-      lessonsCount: 38,
-      duration: '22h 10m',
-      level: 'Intermediate',
-      isEnrolled: false,
-      videos: sampleVideos,
-    ),
-    CourseModel(
-      id: 'c5',
-      title: 'Machine Learning A–Z',
-      instructor: 'Khaled Nour',
-      description:
-          'A comprehensive ML course covering supervised learning, neural networks, NLP and deployment strategies with practical exercises.',
-      thumbnailUrl: 'https://picsum.photos/seed/ml/400/220',
-      category: 'AI & ML',
-      rating: 4.9,
-      studentsCount: 21000,
-      lessonsCount: 70,
-      duration: '45h 20m',
-      level: 'Advanced',
-      isEnrolled: false,
-      videos: sampleVideos,
-    ),
-    CourseModel(
-      id: 'c6',
-      title: 'Node.js & Express – Backend Mastery',
-      instructor: 'Youssef Ali',
-      description:
-          'Build powerful REST APIs and backend services with Node.js, Express, MongoDB, and authentication systems.',
-      thumbnailUrl: 'https://picsum.photos/seed/nodejs/400/220',
-      category: 'Web Dev',
-      rating: 4.5,
-      studentsCount: 6700,
-      lessonsCount: 34,
-      duration: '20h 00m',
-      level: 'Intermediate',
-      isEnrolled: true,
-      videos: sampleVideos,
-    ),
-  ];
-
-  // ── User ──────────────────────────────────────
-  static const UserModel currentUser = UserModel(
-    id: 'u1',
-    name: 'Ahmed Mohamed',
-    email: 'ahmed.mohamed@example.com',
-    avatarUrl: 'https://picsum.photos/seed/user1/200/200',
-    bio: 'Passionate developer & lifelong learner. Building great apps one line at a time.',
-    enrolledCoursesCount: 3,
-    completedCoursesCount: 1,
-    certificatesCount: 1,
-  );
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'course_id': courseId,
+        'title': title,
+        'duration': duration,
+        'video_url': videoUrl,
+        'is_locked': isLocked,
+        'is_watched': isWatched,
+      };
 }

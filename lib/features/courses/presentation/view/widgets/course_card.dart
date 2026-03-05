@@ -118,21 +118,19 @@ class CourseHorizontalCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _CourseThumbnail(course: course, height: 140),
+            _CourseThumbnail(course: course, height: 130),
             Padding(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.only( left: 12, right: 12, top: 12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _CategoryLabel(category: course.category),
-                  const SizedBox(height: 6),
                   Text(
                     course.title,
                     style: AppTextStyles.h3,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 8),
                   _CourseStatsRow(course: course),
                 ],
               ),

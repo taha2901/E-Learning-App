@@ -1,12 +1,15 @@
+import 'package:e_learning/features/courses/data/repo/course_repo.dart';
+import 'package:e_learning/features/courses/presentation/cubit/course_cubit.dart';
 import 'package:e_learning/features/courses/presentation/view/courses_screen.dart';
 import 'package:e_learning/features/home/presentaion/view/home_screen.dart';
 import 'package:e_learning/features/profile/presentation/view/profile_Screen.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/theme/app_colors.dart';
 
 class MainShell extends StatefulWidget {
-  const MainShell({super.key});
-
+  final String userId;
+  const MainShell({super.key, required this.userId});
   @override
   State<MainShell> createState() => _MainShellState();
 }
@@ -14,11 +17,20 @@ class MainShell extends StatefulWidget {
 class _MainShellState extends State<MainShell> {
   int _currentIndex = 0;
 
-  final List<Widget> _pages = const [
-    HomeScreen(),
-    MyCoursesScreen(),
-    ProfileScreen(),
-  ];
+  late final List<Widget> _pages;
+
+  @override
+  void initState() {
+    super.initState();
+    _pages = [
+      BlocProvider(
+        create: (context) =>  CoursesCubit(CoursesRepo(), widget.userId)..fetchMyCourses(),
+        child: HomeScreen(),
+      ),
+      MyCoursesScreen(userId: widget.userId),
+      ProfileScreen(userId: widget.userId),
+    ];
+  }
 
   @override
   Widget build(BuildContext context) {

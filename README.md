@@ -1,7 +1,7 @@
 # 📚 EduLearn — Flutter E-Learning App
 
 <p align="center">
-  <img src="assets/images/app_icon.png" width="120" alt="App Icon"/>
+  <img src="assets/images/image.png" width="120" alt="App Icon"/>
 </p>
 
 <p align="center">
@@ -21,7 +21,7 @@
 
 ## 📱 Screenshots
 
-> _Add your screenshots here_
+![App Screenshots](screenshots/mockup.png)
 
 ---
 
@@ -257,4 +257,5 @@ Pull requests are welcome! For major changes, please open an issue first.
 
 
 <p align="center">Made with Taha Hamada using Flutter & Supabase</p>
+
 

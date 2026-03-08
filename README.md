@@ -170,7 +170,7 @@ profiles
 
 ### 1. Clone the repo
 ```bash
-git clone https://github.com/YOUR_USERNAME/e_learning.git
+git clone https://github.com/taha2901/E-Learning-App.git
 cd e_learning
 ```
 
@@ -179,19 +179,6 @@ cd e_learning
 flutter pub get
 ```
 
-### 3. Configure Supabase
-
-Create a `.env` or update `lib/core/constants/supabase_config.dart`:
-```dart
-const supabaseUrl = 'YOUR_SUPABASE_URL';
-const supabaseAnonKey = 'YOUR_SUPABASE_ANON_KEY';
-```
-
-### 4. Configure YouTube API _(for playlist import)_
-In `admin_courses_screen.dart`:
-```dart
-const apiKey = 'YOUR_YOUTUBE_DATA_API_V3_KEY';
-```
 
 ### 5. Run the app
 ```bash
@@ -268,10 +255,6 @@ Pull requests are welcome! For major changes, please open an issue first.
 
 ---
 
-## 📄 License
 
-This project is licensed under the MIT License.
+<p align="center">Made with Taha Hamada using Flutter & Supabase</p>
 
----
-
-<p align="center">Made with ❤️ using Flutter & Supabase</p>

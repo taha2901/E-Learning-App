@@ -1,7 +1,7 @@
 # 📚 EduLearn — Flutter E-Learning App
 
 <p align="center">
-  <img src="assets/images/image.png" alt="App Icon"/>
+  <img src="assets/images/image.png" width="250" alt="App Icon"/>
 </p>
 
 <p align="center">
@@ -19,11 +19,6 @@
 
 ---
 
-## 📱 Screenshots
-
-![App Screenshots](screenshots/mockup.png)
-
----
 
 ## 🚀 Features
 

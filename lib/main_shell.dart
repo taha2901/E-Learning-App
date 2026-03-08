@@ -2,32 +2,54 @@ import 'package:e_learning/features/courses/data/repo/course_repo.dart';
 import 'package:e_learning/features/courses/presentation/cubit/course_cubit.dart';
 import 'package:e_learning/features/courses/presentation/view/courses_screen.dart';
 import 'package:e_learning/features/home/presentaion/view/home_screen.dart';
+import 'package:e_learning/features/notificatio/data/repo/notification_repo.dart';
+import 'package:e_learning/features/notificatio/presentation/logic/notification_cubit.dart';
 import 'package:e_learning/features/profile/presentation/view/profile_Screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/theme/app_colors.dart';
 
-class MainShell extends StatefulWidget {
+class MainShell extends StatelessWidget {
   final String userId;
   const MainShell({super.key, required this.userId});
+
   @override
-  State<MainShell> createState() => _MainShellState();
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      // ✅ NotificationCubit هنا — فوق كل الـ pages
+      create: (_) => NotificationCubit(
+        NotificationRepo(),
+        userId: userId,
+      )..load(),
+      child: _MainShellBody(userId: userId),
+    );
+  }
 }
 
-class _MainShellState extends State<MainShell> {
-  int _currentIndex = 0;
+class _MainShellBody extends StatefulWidget {
+  final String userId;
+  const _MainShellBody({required this.userId});
 
+  @override
+  State<_MainShellBody> createState() => _MainShellBodyState();
+}
+
+class _MainShellBodyState extends State<_MainShellBody> {
+  int _currentIndex = 0;
   late final List<Widget> _pages;
 
   @override
   void initState() {
     super.initState();
     _pages = [
+      // ✅ HomeScreen مش بتعمل NotificationCubit جديد — بياخده من فوق
       BlocProvider(
-        create: (context) =>  CoursesCubit(CoursesRepo(), widget.userId)..fetchMyCourses(),
-        child: HomeScreen(),
+        create: (_) =>
+            CoursesCubit(CoursesRepo(), widget.userId)..fetchMyCourses(),
+        child: const HomeScreen(),
       ),
       MyCoursesScreen(userId: widget.userId),
+      // ✅ ProfileScreen بياخد الـ cubit من فوق تلقائي — مش محتاج BlocProvider.value
       ProfileScreen(userId: widget.userId),
     ];
   }
@@ -35,10 +57,7 @@ class _MainShellState extends State<MainShell> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: IndexedStack(
-        index: _currentIndex,
-        children: _pages,
-      ),
+      body: IndexedStack(index: _currentIndex, children: _pages),
       bottomNavigationBar: _AppBottomNavBar(
         currentIndex: _currentIndex,
         onTap: (index) => setState(() => _currentIndex = index),
@@ -51,10 +70,7 @@ class _AppBottomNavBar extends StatelessWidget {
   final int currentIndex;
   final ValueChanged<int> onTap;
 
-  const _AppBottomNavBar({
-    required this.currentIndex,
-    required this.onTap,
-  });
+  const _AppBottomNavBar({required this.currentIndex, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -148,7 +164,7 @@ class _NavItem extends StatelessWidget {
               const SizedBox(width: 6),
               Text(
                 label,
-                style: TextStyle(
+                style: const TextStyle(
                   fontFamily: 'Poppins',
                   fontSize: 12,
                   fontWeight: FontWeight.w600,

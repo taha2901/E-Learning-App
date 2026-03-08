@@ -1,4 +1,6 @@
 import 'package:bloc/bloc.dart';
+import 'package:e_learning/core/erros/app_exceptions.dart';
+import 'package:e_learning/core/erros/network_exception_handler.dart';
 import 'package:e_learning/features/courses/data/model/courses.dart';
 import 'package:e_learning/features/courses/data/repo/course_repo.dart';
 import 'package:e_learning/features/home/presentaion/cubit/home_states.dart';
@@ -19,7 +21,8 @@ class HomeCubit extends Cubit<HomeState> {
         searchQuery: '',
       ));
     } catch (e) {
-      emit(HomeError(e.toString()));
+      final ex = e is AppException ? e : NetworkExceptionHandler.handle(e);
+      emit(HomeError(ex.message, exception: ex));
     }
   }
 

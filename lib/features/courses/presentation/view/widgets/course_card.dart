@@ -4,15 +4,12 @@ import 'package:e_learning/core/theme/text_styles.dart';
 import 'package:e_learning/core/widgets/level_badge.dart';
 import 'package:e_learning/features/courses/data/model/courses.dart';
 import 'package:flutter/material.dart';
+
 class CourseCard extends StatelessWidget {
   final CourseModel course;
   final VoidCallback? onTap;
 
-  const CourseCard({
-    super.key,
-    required this.course,
-    this.onTap,
-  });
+  const CourseCard({super.key, required this.course, this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -64,8 +61,11 @@ class CourseCard extends StatelessWidget {
                   // Instructor
                   Row(
                     children: [
-                      const Icon(Icons.person_outline_rounded,
-                          size: 14, color: AppColors.textHint),
+                      const Icon(
+                        Icons.person_outline_rounded,
+                        size: 14,
+                        color: AppColors.textHint,
+                      ),
                       const SizedBox(width: 4),
                       Text(course.instructor, style: AppTextStyles.bodySmall),
                     ],
@@ -91,11 +91,7 @@ class CourseHorizontalCard extends StatelessWidget {
   final CourseModel course;
   final VoidCallback? onTap;
 
-  const CourseHorizontalCard({
-    super.key,
-    required this.course,
-    this.onTap,
-  });
+  const CourseHorizontalCard({super.key, required this.course, this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -120,7 +116,7 @@ class CourseHorizontalCard extends StatelessWidget {
           children: [
             _CourseThumbnail(course: course, height: 130),
             Padding(
-              padding: const EdgeInsets.only( left: 12, right: 12, top: 12),
+              padding: const EdgeInsets.only(left: 12, right: 12, top: 12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -149,12 +145,14 @@ class MyCourseCard extends StatelessWidget {
   final CourseModel course;
   final VoidCallback? onTap;
   final double progress;
+  final bool isLoadingProgress;
 
   const MyCourseCard({
     super.key,
     required this.course,
     this.onTap,
     this.progress = 0.4,
+    this.isLoadingProgress = false,
   });
 
   @override
@@ -190,8 +188,11 @@ class MyCourseCard extends StatelessWidget {
                   fit: BoxFit.cover,
                   errorBuilder: (_, __, ___) => Container(
                     color: AppColors.primary.withOpacity(0.1),
-                    child: const Icon(Icons.image_outlined,
-                        color: AppColors.primary, size: 32),
+                    child: const Icon(
+                      Icons.image_outlined,
+                      color: AppColors.primary,
+                      size: 32,
+                    ),
                   ),
                 ),
               ),
@@ -219,13 +220,29 @@ class MyCourseCard extends StatelessWidget {
                         Expanded(
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(100),
-                            child: LinearProgressIndicator(
-                              value: progress,
-                              backgroundColor: AppColors.surfaceVariant,
-                              valueColor: const AlwaysStoppedAnimation<Color>(
-                                  AppColors.primary),
-                              minHeight: 5,
-                            ),
+                            child: isLoadingProgress
+                                ? const SizedBox(
+                                    height: 16,
+                                    width: 16,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : Expanded(
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(100),
+                                      child: LinearProgressIndicator(
+                                        value: progress,
+                                        backgroundColor:
+                                            AppColors.surfaceVariant,
+                                        valueColor:
+                                            const AlwaysStoppedAnimation<Color>(
+                                              AppColors.primary,
+                                            ),
+                                        minHeight: 5,
+                                      ),
+                                    ),
+                                  ),
                           ),
                         ),
                         const SizedBox(width: 8),
@@ -276,8 +293,11 @@ class _CourseThumbnail extends StatelessWidget {
               errorBuilder: (_, __, ___) => Container(
                 height: height,
                 color: AppColors.primary.withOpacity(0.1),
-                child: const Icon(Icons.play_circle_outline_rounded,
-                    color: AppColors.primary, size: 48),
+                child: const Icon(
+                  Icons.play_circle_outline_rounded,
+                  color: AppColors.primary,
+                  size: 48,
+                ),
               ),
             ),
           ),
@@ -296,12 +316,18 @@ class _CourseThumbnail extends StatelessWidget {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.check_rounded, color: Colors.white, size: 12),
+                  const Icon(
+                    Icons.check_rounded,
+                    color: Colors.white,
+                    size: 12,
+                  ),
                   const SizedBox(width: 4),
                   Text(
                     'Enrolled',
-                    style: AppTextStyles.caption
-                        .copyWith(color: Colors.white, fontWeight: FontWeight.w600),
+                    style: AppTextStyles.caption.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ],
               ),
@@ -320,7 +346,11 @@ class _CourseThumbnail extends StatelessWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.star_rounded, color: Color(0xFFFBBF24), size: 13),
+                const Icon(
+                  Icons.star_rounded,
+                  color: Color(0xFFFBBF24),
+                  size: 13,
+                ),
                 const SizedBox(width: 3),
                 Text(
                   course.rating.toString(),
@@ -360,7 +390,10 @@ class _CourseStatsRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        _StatItem(icon: Icons.play_lesson_outlined, label: '${course.lessonsCount} lessons'),
+        _StatItem(
+          icon: Icons.play_lesson_outlined,
+          label: '${course.lessonsCount} lessons',
+        ),
         const SizedBox(width: 12),
         _StatItem(icon: Icons.schedule_outlined, label: course.duration),
         const SizedBox(width: 12),

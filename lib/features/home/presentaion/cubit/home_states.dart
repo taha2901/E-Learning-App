@@ -1,3 +1,4 @@
+import 'package:e_learning/core/erros/app_exceptions.dart';
 import 'package:e_learning/features/courses/data/model/courses.dart';
 
 abstract class HomeState {}
@@ -5,11 +6,6 @@ abstract class HomeState {}
 class HomeInitial extends HomeState {}
 
 class HomeLoading extends HomeState {}
-
-class HomeError extends HomeState {
-  final String message;
-  HomeError(this.message);
-}
 
 class HomeLoaded extends HomeState {
   final List<CourseModel> courses;
@@ -20,8 +16,8 @@ class HomeLoaded extends HomeState {
   HomeLoaded({
     required this.courses,
     required this.featuredCourses,
-    this.selectedCategory = 'All',
-    this.searchQuery = '',
+    required this.selectedCategory,
+    required this.searchQuery,
   });
 
   HomeLoaded copyWith({
@@ -29,12 +25,17 @@ class HomeLoaded extends HomeState {
     List<CourseModel>? featuredCourses,
     String? selectedCategory,
     String? searchQuery,
-  }) {
-    return HomeLoaded(
-      courses: courses ?? this.courses,
-      featuredCourses: featuredCourses ?? this.featuredCourses,
-      selectedCategory: selectedCategory ?? this.selectedCategory,
-      searchQuery: searchQuery ?? this.searchQuery,
-    );
-  }
+  }) =>
+      HomeLoaded(
+        courses: courses ?? this.courses,
+        featuredCourses: featuredCourses ?? this.featuredCourses,
+        selectedCategory: selectedCategory ?? this.selectedCategory,
+        searchQuery: searchQuery ?? this.searchQuery,
+      );
+}
+
+class HomeError extends HomeState {
+  final String message;
+  final AppException? exception;
+  HomeError(this.message, {this.exception});
 }

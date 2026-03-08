@@ -11,6 +11,8 @@ class AppTextField extends StatefulWidget {
   final TextEditingController? controller;
   final String? Function(String?)? validator;
   final TextInputType keyboardType;
+  //onChanged
+  final void Function(String)? onChanged;
 
   const AppTextField({
     super.key,
@@ -18,6 +20,7 @@ class AppTextField extends StatefulWidget {
     required this.hint,
     required this.prefixIcon,
     this.isPassword = false,
+    this.onChanged,
     this.controller,
     this.validator,
     this.keyboardType = TextInputType.text,
@@ -43,6 +46,7 @@ class _AppTextFieldState extends State<AppTextField> {
           keyboardType: widget.keyboardType,
           validator: widget.validator,
           style: AppTextStyles.bodyLarge,
+          onChanged: widget.onChanged,
           decoration: InputDecoration(
             hintText: widget.hint,
             prefixIcon: Icon(
@@ -50,6 +54,7 @@ class _AppTextFieldState extends State<AppTextField> {
               color: AppColors.textHint,
               size: 20,
             ),
+
             suffixIcon: widget.isPassword
                 ? IconButton(
                     icon: Icon(

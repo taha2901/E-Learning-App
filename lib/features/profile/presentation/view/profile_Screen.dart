@@ -1,11 +1,18 @@
 import 'dart:io';
 import 'package:e_learning/core/constants/app_constants.dart';
+import 'package:e_learning/core/erros/app_error_widget.dart';
+import 'package:e_learning/core/erros/app_exceptions.dart';
+import 'package:e_learning/core/erros/network_exception_handler.dart';
 import 'package:e_learning/core/theme/app_colors.dart';
 import 'package:e_learning/core/theme/text_styles.dart';
 import 'package:e_learning/core/widgets/stat_card.dart';
 import 'package:e_learning/features/auth/presentaion/view/login_screen.dart';
+import 'package:e_learning/features/notificatio/presentation/logic/notification_cubit.dart';
+import 'package:e_learning/features/notificatio/presentation/logic/notification_states.dart';
+import 'package:e_learning/features/notificatio/presentation/view/notifications_screen.dart';
 import 'package:e_learning/features/profile/presentation/cubit/profile_cubit.dart';
 import 'package:e_learning/features/profile/presentation/cubit/profile_states.dart';
+import 'package:e_learning/features/profile/presentation/view/certificate_screen.dart';
 import 'package:e_learning/features/watchlist/presentation/view/saved_courses.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -27,24 +34,30 @@ class ProfileScreen extends StatelessWidget {
             if (state is ProfileLoading) {
               return const Center(child: CircularProgressIndicator());
             }
+
+            // ✅ Error State — AppErrorWidget مع Retry
             if (state is ProfileError) {
-              return Center(child: Text('Error: ${state.message}'));
+              return AppErrorWidget(
+                exception: UnknownException(state.message),
+                onRetry: () =>
+                    context.read<ProfileCubit>().fetchUser(userId),
+              );
             }
+
             if (state is ProfileLoaded) {
               final user = state.userData;
               return CustomScrollView(
                 slivers: [
-                  // ── Header ───────────────────────────────────────────────
                   SliverToBoxAdapter(
                     child: _ProfileHeader(
                       user: user,
                       userId: userId,
-                      onEditTap: () => _showEditDialog(context, user, userId),
-                      onAvatarTap: () => _pickAndUploadAvatar(context, userId),
+                      onEditTap: () =>
+                          _showEditDialog(context, user, userId),
+                      onAvatarTap: () =>
+                          _pickAndUploadAvatar(context, userId),
                     ),
                   ),
-
-                  // ── Stats ────────────────────────────────────────────────
                   SliverToBoxAdapter(
                     child: Padding(
                       padding: const EdgeInsets.symmetric(
@@ -53,21 +66,24 @@ class ProfileScreen extends StatelessWidget {
                       child: Row(
                         children: [
                           StatCard(
-                            value: '${user['enrolled_courses_count'] ?? 0}',
+                            value:
+                                '${user['enrolled_courses_count'] ?? 0}',
                             label: 'Enrolled',
                             icon: Icons.play_circle_outline_rounded,
                             color: AppColors.primary,
                           ),
                           const SizedBox(width: 12),
                           StatCard(
-                            value: '${user['completed_courses_count'] ?? 0}',
+                            value:
+                                '${user['completed_courses_count'] ?? 0}',
                             label: 'Completed',
                             icon: Icons.check_circle_outline_rounded,
                             color: AppColors.success,
                           ),
                           const SizedBox(width: 12),
                           StatCard(
-                            value: '${user['certificates_count'] ?? 0}',
+                            value:
+                                '${user['certificates_count'] ?? 0}',
                             label: 'Certificates',
                             icon: Icons.workspace_premium_outlined,
                             color: AppColors.warning,
@@ -76,10 +92,7 @@ class ProfileScreen extends StatelessWidget {
                       ),
                     ),
                   ),
-
                   const SliverToBoxAdapter(child: SizedBox(height: 28)),
-
-                  // ── Menus ─────────────────────────────────────────────────
                   SliverToBoxAdapter(
                     child: Padding(
                       padding: const EdgeInsets.symmetric(
@@ -95,14 +108,35 @@ class ProfileScreen extends StatelessWidget {
                               _MenuItem(
                                 icon: Icons.person_outline_rounded,
                                 label: 'Edit Profile',
-                                onTap: () =>
-                                    _showEditDialog(context, user, userId),
+                                onTap: () => _showEditDialog(
+                                    context, user, userId),
                               ),
                               _MenuItem(
                                 icon: Icons.notifications_outlined,
                                 label: 'Notifications',
-                                trailing: _Badge(count: 3),
-                                onTap: () {},
+                                trailing: BlocBuilder<NotificationCubit,
+                                    NotificationState>(
+                                  builder: (context, state) {
+                                    final count =
+                                        state is NotificationLoaded
+                                            ? state.unreadCount
+                                            : 0;
+                                    return count > 0
+                                        ? _Badge(count: count)
+                                        : const SizedBox.shrink();
+                                  },
+                                ),
+                                onTap: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => BlocProvider.value(
+                                      value: context
+                                          .read<NotificationCubit>(),
+                                      child:
+                                          const NotificationsScreen(),
+                                    ),
+                                  ),
+                                ),
                               ),
                               _MenuItem(
                                 icon: Icons.lock_outline_rounded,
@@ -130,17 +164,14 @@ class ProfileScreen extends StatelessWidget {
                               _MenuItem(
                                 icon: Icons.workspace_premium_outlined,
                                 label: 'My Certificates',
-                                onTap: () => _showCertificates(context, user),
+                                onTap: () => _showCertificates(
+                                    context, user, userId),
                               ),
                               _MenuItem(
                                 icon: Icons.history_rounded,
                                 label: 'Watch History',
-                                onTap: () => _showWatchHistory(context, userId),
-                              ),
-                              _MenuItem(
-                                icon: Icons.download_outlined,
-                                label: 'Downloaded Lessons',
-                                onTap: () {},
+                                onTap: () =>
+                                    _showWatchHistory(context, userId),
                               ),
                             ],
                           ),
@@ -164,7 +195,9 @@ class ProfileScreen extends StatelessWidget {
                           const SizedBox(height: 24),
                           _LogoutButton(
                             onTap: () async {
-                              await Supabase.instance.client.auth.signOut();
+                              context.read<NotificationCubit>().close();
+                              await Supabase.instance.client.auth
+                                  .signOut();
                               if (context.mounted) {
                                 Navigator.pushAndRemoveUntil(
                                   context,
@@ -191,7 +224,6 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  // ── Pick & Upload Avatar ──────────────────────────────────────────────────
   void _pickAndUploadAvatar(BuildContext context, String userId) {
     showModalBottomSheet(
       context: context,
@@ -206,8 +238,7 @@ class ProfileScreen extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
-                width: 40,
-                height: 4,
+                width: 40, height: 4,
                 decoration: BoxDecoration(
                   color: AppColors.cardBorder,
                   borderRadius: BorderRadius.circular(100),
@@ -230,9 +261,9 @@ class ProfileScreen extends StatelessWidget {
                         );
                         if (picked != null && context.mounted) {
                           context.read<ProfileCubit>().updateAvatar(
-                            userId: userId,
-                            image: File(picked.path),
-                          );
+                                userId: userId,
+                                image: File(picked.path),
+                              );
                         }
                       },
                     ),
@@ -250,9 +281,9 @@ class ProfileScreen extends StatelessWidget {
                         );
                         if (picked != null && context.mounted) {
                           context.read<ProfileCubit>().updateAvatar(
-                            userId: userId,
-                            image: File(picked.path),
-                          );
+                                userId: userId,
+                                image: File(picked.path),
+                              );
                         }
                       },
                     ),
@@ -267,19 +298,17 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  // ── Edit Profile Dialog ───────────────────────────────────────────────────
   void _showEditDialog(
     BuildContext context,
     Map<String, dynamic> user,
     String userId,
   ) {
-    final nameCtrl = TextEditingController(
-      text: user['name']?.toString() ?? '',
-    );
-    final bioCtrl = TextEditingController(text: user['bio']?.toString() ?? '');
-    final phoneCtrl = TextEditingController(
-      text: user['phone']?.toString() ?? '',
-    );
+    final nameCtrl =
+        TextEditingController(text: user['name']?.toString() ?? '');
+    final bioCtrl =
+        TextEditingController(text: user['bio']?.toString() ?? '');
+    final phoneCtrl =
+        TextEditingController(text: user['phone']?.toString() ?? '');
 
     showModalBottomSheet(
       context: context,
@@ -290,9 +319,7 @@ class ProfileScreen extends StatelessWidget {
       ),
       builder: (ctx) => Padding(
         padding: EdgeInsets.fromLTRB(
-          24,
-          24,
-          24,
+          24, 24, 24,
           MediaQuery.of(ctx).viewInsets.bottom + 24,
         ),
         child: Column(
@@ -336,11 +363,11 @@ class ProfileScreen extends StatelessWidget {
                 onPressed: () async {
                   Navigator.pop(ctx);
                   await context.read<ProfileCubit>().updateProfile(
-                    userId: userId,
-                    name: nameCtrl.text.trim(),
-                    bio: bioCtrl.text.trim(),
-                    phone: phoneCtrl.text.trim(),
-                  );
+                        userId: userId,
+                        name: nameCtrl.text.trim(),
+                        bio: bioCtrl.text.trim(),
+                        phone: phoneCtrl.text.trim(),
+                      );
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
@@ -349,7 +376,8 @@ class ProfileScreen extends StatelessWidget {
                     borderRadius: BorderRadius.circular(14),
                   ),
                 ),
-                child: Text('Save Changes', style: AppTextStyles.labelLarge),
+                child: Text('Save Changes',
+                    style: AppTextStyles.labelLarge),
               ),
             ),
           ],
@@ -358,7 +386,6 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  // ── Watch History ─────────────────────────────────────────────────────────
   void _showWatchHistory(BuildContext context, String userId) {
     showModalBottomSheet(
       context: context,
@@ -371,79 +398,29 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  // ── Certificates ──────────────────────────────────────────────────────────
-  void _showCertificates(BuildContext context, Map<String, dynamic> user) {
-    final completed = user['completed_courses_count'] ?? 0;
+  void _showCertificates(
+    BuildContext context,
+    Map<String, dynamic> user,
+    String userId,
+  ) {
     showModalBottomSheet(
       context: context,
       backgroundColor: AppColors.surface,
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (_) => Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('My Certificates', style: AppTextStyles.h2),
-            const SizedBox(height: 20),
-            if (completed == 0)
-              Column(
-                children: [
-                  const Icon(
-                    Icons.workspace_premium_outlined,
-                    size: 56,
-                    color: AppColors.textHint,
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    'Complete a course to earn your first certificate!',
-                    style: AppTextStyles.bodyMedium.copyWith(
-                      color: AppColors.textSecondary,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              )
-            else
-              ...List.generate(
-                completed,
-                (i) => ListTile(
-                  leading: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: AppColors.warning.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Icon(
-                      Icons.workspace_premium_rounded,
-                      color: AppColors.warning,
-                    ),
-                  ),
-                  title: Text(
-                    'Certificate of Completion #${i + 1}',
-                    style: AppTextStyles.h3,
-                  ),
-                  subtitle: Text(
-                    'Course Completed',
-                    style: AppTextStyles.caption,
-                  ),
-                ),
-              ),
-            const SizedBox(height: 16),
-          ],
-        ),
-      ),
+      builder: (_) => _CertificatesSheet(userId: userId, user: user),
     );
   }
 
-  // ── About ─────────────────────────────────────────────────────────────────
   void _showAbout(BuildContext context) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.surface,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Row(
           children: [
             Container(
@@ -452,11 +429,8 @@ class ProfileScreen extends StatelessWidget {
                 color: AppColors.primary.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Icon(
-                Icons.school_rounded,
-                color: AppColors.primary,
-                size: 24,
-              ),
+              child: const Icon(Icons.school_rounded,
+                  color: AppColors.primary, size: 24),
             ),
             const SizedBox(width: 12),
             Text('LearnFlow', style: AppTextStyles.h2),
@@ -477,9 +451,300 @@ class ProfileScreen extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: Text('Close', style: TextStyle(color: AppColors.primary)),
+            child:
+                Text('Close', style: TextStyle(color: AppColors.primary)),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Certificates Sheet — with error handling
+// ─────────────────────────────────────────────────────────────────────────────
+class _CertificatesSheet extends StatefulWidget {
+  final String userId;
+  final Map<String, dynamic> user;
+  const _CertificatesSheet(
+      {required this.userId, required this.user});
+
+  @override
+  State<_CertificatesSheet> createState() => _CertificatesSheetState();
+}
+
+class _CertificatesSheetState extends State<_CertificatesSheet> {
+  List<Map<String, dynamic>> _completedCourses = [];
+  bool _loading = true;
+  AppException? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCompletedCourses();
+  }
+
+  Future<void> _loadCompletedCourses() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final enrollmentsRaw = await Supabase.instance.client
+          .from('enrollments')
+          .select('course_id, completed_at')
+          .eq('user_id', widget.userId)
+          .not('completed_at', 'is', null)
+          .order('completed_at', ascending: false);
+
+      final enrollments =
+          (enrollmentsRaw as List).cast<Map<String, dynamic>>();
+
+      if (enrollments.isEmpty) {
+        setState(() => _loading = false);
+        return;
+      }
+
+      final courseIds =
+          enrollments.map((e) => e['course_id'] as String).toList();
+
+      final coursesRaw = await Supabase.instance.client
+          .from('courses')
+          .select('id, title, instructor')
+          .inFilter('id', courseIds);
+
+      final coursesMap = {
+        for (final c in (coursesRaw as List).cast<Map<String, dynamic>>())
+          c['id'] as String: c,
+      };
+
+      final merged = enrollments.map((e) {
+        final courseId = e['course_id'] as String;
+        final course = coursesMap[courseId] ?? {};
+        return {
+          'course_id': courseId,
+          'completed_at': e['completed_at'],
+          'courses': course,
+        };
+      }).toList();
+
+      setState(() {
+        _completedCourses = merged;
+        _loading = false;
+      });
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = NetworkExceptionHandler.handle(e);
+          _loading = false;
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return DraggableScrollableSheet(
+      expand: false,
+      initialChildSize: 0.5,
+      maxChildSize: 0.9,
+      builder: (ctx, scrollCtrl) => Padding(
+        padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+        child: Column(
+          children: [
+            Container(
+              width: 40, height: 4,
+              decoration: BoxDecoration(
+                color: AppColors.cardBorder,
+                borderRadius: BorderRadius.circular(100),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Text('My Certificates', style: AppTextStyles.h2),
+                const Spacer(),
+                IconButton(
+                  icon: const Icon(Icons.close_rounded),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+
+            if (_loading)
+              const Expanded(
+                  child: Center(child: CircularProgressIndicator()))
+            else if (_error != null)
+              // ✅ Error state مع Retry
+              Expanded(
+                child: AppErrorWidget(
+                  exception: _error!,
+                  onRetry: _loadCompletedCourses,
+                ),
+              )
+            else if (_completedCourses.isEmpty)
+              Expanded(
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(
+                        Icons.workspace_premium_outlined,
+                        size: 56,
+                        color: AppColors.textHint,
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Complete a course to earn your first certificate!',
+                        style: AppTextStyles.bodyMedium.copyWith(
+                            color: AppColors.textSecondary),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                ),
+              )
+            else
+              Expanded(
+                child: ListView.separated(
+                  controller: scrollCtrl,
+                  itemCount: _completedCourses.length,
+                  separatorBuilder: (_, __) =>
+                      const SizedBox(height: 10),
+                  itemBuilder: (_, i) {
+                    final enrollment = _completedCourses[i];
+                    final course = enrollment['courses']
+                            as Map<String, dynamic>? ??
+                        {};
+                    final courseTitle =
+                        course['title']?.toString() ??
+                            'Course #${i + 1}';
+                    final instructor =
+                        course['instructor']?.toString() ??
+                            'Instructor';
+                    final completedAt = DateTime.tryParse(
+                          enrollment['completed_at']?.toString() ??
+                              '',
+                        ) ??
+                        DateTime.now();
+                    final studentName =
+                        widget.user['name']?.toString() ?? 'Student';
+                    final certId =
+                        'LF-${enrollment['course_id'].toString().substring(0, 8).toUpperCase()}';
+
+                    return _CertificateListTile(
+                      index: i + 1,
+                      courseTitle: courseTitle,
+                      completedAt: completedAt,
+                      onTap: () {
+                        Navigator.pop(context);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => CertificateScreen(
+                              data: CertificateData(
+                                studentName: studentName,
+                                courseName: courseTitle,
+                                instructorName: instructor,
+                                completionDate: completedAt,
+                                certificateId: certId,
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    );
+                  },
+                ),
+              ),
+            const SizedBox(height: 16),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────
+// Certificate List Tile
+// ─────────────────────────────────────────────
+class _CertificateListTile extends StatelessWidget {
+  final int index;
+  final String courseTitle;
+  final DateTime completedAt;
+  final VoidCallback onTap;
+
+  const _CertificateListTile({
+    required this.index,
+    required this.courseTitle,
+    required this.completedAt,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final dateStr =
+        '${completedAt.day}/${completedAt.month}/${completedAt.year}';
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.cardBorder),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 48, height: 48,
+              decoration: BoxDecoration(
+                color: AppColors.warning.withOpacity(0.12),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(Icons.workspace_premium_rounded,
+                  color: AppColors.warning, size: 26),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Certificate of Completion #$index',
+                      style: AppTextStyles.h3),
+                  const SizedBox(height: 2),
+                  Text(courseTitle,
+                      style: AppTextStyles.bodySmall
+                          .copyWith(color: AppColors.textSecondary),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis),
+                  const SizedBox(height: 2),
+                  Text('Completed $dateStr',
+                      style: AppTextStyles.caption
+                          .copyWith(color: AppColors.textHint)),
+                ],
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withOpacity(0.08),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(Icons.arrow_forward_ios_rounded,
+                  color: AppColors.primary, size: 14),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -510,11 +775,8 @@ class _ProfileHeader extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.fromLTRB(
-        AppConstants.horizontalPadding,
-        0,
-        AppConstants.horizontalPadding,
-        28,
-      ),
+          AppConstants.horizontalPadding, 0,
+          AppConstants.horizontalPadding, 28),
       child: SafeArea(
         child: Column(
           children: [
@@ -524,17 +786,13 @@ class _ProfileHeader extends StatelessWidget {
               children: [
                 Text('Profile', style: AppTextStyles.h1),
                 IconButton(
-                  icon: const Icon(
-                    Icons.settings_outlined,
-                    color: AppColors.textPrimary,
-                  ),
+                  icon: const Icon(Icons.settings_outlined,
+                      color: AppColors.textPrimary),
                   onPressed: () {},
                 ),
               ],
             ),
             const SizedBox(height: 24),
-
-            // Avatar
             GestureDetector(
               onTap: onAvatarTap,
               child: Stack(
@@ -547,98 +805,56 @@ class _ProfileHeader extends StatelessWidget {
                         : null,
                     child: avatarUrl.isEmpty
                         ? Text(
-                            name.isNotEmpty ? name[0].toUpperCase() : 'U',
-                            style: AppTextStyles.h1.copyWith(
-                              color: AppColors.primary,
-                            ),
+                            name.isNotEmpty
+                                ? name[0].toUpperCase()
+                                : 'U',
+                            style: AppTextStyles.h1
+                                .copyWith(color: AppColors.primary),
                           )
                         : null,
                   ),
                   Positioned(
-                    bottom: 0,
-                    right: 0,
+                    bottom: 0, right: 0,
                     child: Container(
-                      width: 30,
-                      height: 30,
+                      width: 30, height: 30,
                       decoration: const BoxDecoration(
-                        color: AppColors.primary,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.camera_alt_rounded,
-                        color: Colors.white,
-                        size: 16,
-                      ),
+                          color: AppColors.primary,
+                          shape: BoxShape.circle),
+                      child: const Icon(Icons.camera_alt_rounded,
+                          color: Colors.white, size: 16),
                     ),
                   ),
                 ],
               ),
             ),
             const SizedBox(height: 16),
-
             Text(name, style: AppTextStyles.h1),
             const SizedBox(height: 4),
-            Text(
-              email,
-              style: AppTextStyles.bodyMedium.copyWith(
-                color: AppColors.primary,
-              ),
-            ),
-
-            // Phone (لو موجود)
+            Text(email,
+                style: AppTextStyles.bodyMedium
+                    .copyWith(color: AppColors.primary)),
             if (phone.isNotEmpty) ...[
               const SizedBox(height: 4),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(
-                    Icons.phone_outlined,
-                    size: 14,
-                    color: AppColors.textHint,
-                  ),
+                  const Icon(Icons.phone_outlined,
+                      size: 14, color: AppColors.textHint),
                   const SizedBox(width: 4),
-                  Text(
-                    phone,
-                    style: AppTextStyles.bodySmall.copyWith(
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
+                  Text(phone,
+                      style: AppTextStyles.bodySmall
+                          .copyWith(color: AppColors.textSecondary)),
                 ],
               ),
             ],
-
             if (bio.isNotEmpty) ...[
               const SizedBox(height: 8),
-              Text(
-                bio,
-                style: AppTextStyles.bodySmall,
-                textAlign: TextAlign.center,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
+              Text(bio,
+                  style: AppTextStyles.bodySmall,
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis),
             ],
-
-            const SizedBox(height: 16),
-            OutlinedButton(
-              onPressed: onEditTap,
-              style: OutlinedButton.styleFrom(
-                foregroundColor: AppColors.primary,
-                side: const BorderSide(color: AppColors.primary),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(100),
-                ),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24,
-                  vertical: 10,
-                ),
-              ),
-              child: Text(
-                'Edit Profile',
-                style: AppTextStyles.labelMedium.copyWith(
-                  color: AppColors.primary,
-                ),
-              ),
-            ),
           ],
         ),
       ),
@@ -679,17 +895,14 @@ class _EditField extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────
-// Source Tile (Gallery / Camera)
+// Source Tile
 // ─────────────────────────────────────────────
 class _SourceTile extends StatelessWidget {
   final IconData icon;
   final String label;
   final VoidCallback onTap;
-  const _SourceTile({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-  });
+  const _SourceTile(
+      {required this.icon, required this.label, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -700,19 +913,17 @@ class _SourceTile extends StatelessWidget {
         decoration: BoxDecoration(
           color: AppColors.primary.withOpacity(0.06),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.primary.withOpacity(0.15)),
+          border: Border.all(
+              color: AppColors.primary.withOpacity(0.15)),
         ),
         child: Column(
           children: [
             Icon(icon, color: AppColors.primary, size: 30),
             const SizedBox(height: 8),
-            Text(
-              label,
-              style: AppTextStyles.bodySmall.copyWith(
-                color: AppColors.primary,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
+            Text(label,
+                style: AppTextStyles.bodySmall.copyWith(
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.w600)),
           ],
         ),
       ),
@@ -721,7 +932,7 @@ class _SourceTile extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────
-// Watch History Sheet
+// Watch History Sheet — with error handling
 // ─────────────────────────────────────────────
 class _WatchHistorySheet extends StatefulWidget {
   final String userId;
@@ -734,6 +945,7 @@ class _WatchHistorySheet extends StatefulWidget {
 class _WatchHistorySheetState extends State<_WatchHistorySheet> {
   List<Map<String, dynamic>> _history = [];
   bool _loading = true;
+  AppException? _error;
 
   @override
   void initState() {
@@ -742,6 +954,10 @@ class _WatchHistorySheetState extends State<_WatchHistorySheet> {
   }
 
   Future<void> _load() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
     try {
       final result = await Supabase.instance.client
           .from('video_progress')
@@ -756,8 +972,13 @@ class _WatchHistorySheetState extends State<_WatchHistorySheet> {
         _history = (result as List).cast<Map<String, dynamic>>();
         _loading = false;
       });
-    } catch (_) {
-      setState(() => _loading = false);
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = NetworkExceptionHandler.handle(e);
+          _loading = false;
+        });
+      }
     }
   }
 
@@ -783,25 +1004,28 @@ class _WatchHistorySheetState extends State<_WatchHistorySheet> {
             ),
             const SizedBox(height: 12),
             if (_loading)
-              const Expanded(child: Center(child: CircularProgressIndicator()))
+              const Expanded(
+                  child: Center(child: CircularProgressIndicator()))
+            else if (_error != null)
+              // ✅ Error state مع Retry
+              Expanded(
+                child: AppErrorWidget(
+                  exception: _error!,
+                  onRetry: _load,
+                ),
+              )
             else if (_history.isEmpty)
               Expanded(
                 child: Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(
-                        Icons.history_rounded,
-                        size: 56,
-                        color: AppColors.textHint,
-                      ),
+                      const Icon(Icons.history_rounded,
+                          size: 56, color: AppColors.textHint),
                       const SizedBox(height: 12),
-                      Text(
-                        'No watch history yet',
-                        style: AppTextStyles.bodyMedium.copyWith(
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
+                      Text('No watch history yet',
+                          style: AppTextStyles.bodyMedium.copyWith(
+                              color: AppColors.textSecondary)),
                     ],
                   ),
                 ),
@@ -815,49 +1039,43 @@ class _WatchHistorySheetState extends State<_WatchHistorySheet> {
                       const Divider(height: 1, color: AppColors.divider),
                   itemBuilder: (_, i) {
                     final item = _history[i];
-                    final video = item['videos'] as Map<String, dynamic>? ?? {};
+                    final video =
+                        item['videos'] as Map<String, dynamic>? ?? {};
                     final course =
                         video['courses'] as Map<String, dynamic>? ?? {};
                     final watchedAt =
                         DateTime.tryParse(item['watched_at'] ?? '') ??
-                        DateTime.now();
+                            DateTime.now();
                     final diff = DateTime.now().difference(watchedAt);
                     final timeAgo = diff.inDays > 0
                         ? '${diff.inDays}d ago'
                         : diff.inHours > 0
-                        ? '${diff.inHours}h ago'
-                        : 'Recently';
+                            ? '${diff.inHours}h ago'
+                            : 'Recently';
 
                     return ListTile(
-                      contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                      contentPadding:
+                          const EdgeInsets.symmetric(vertical: 8),
                       leading: Container(
-                        width: 44,
-                        height: 44,
+                        width: 44, height: 44,
                         decoration: BoxDecoration(
                           color: AppColors.primary.withOpacity(0.08),
                           borderRadius: BorderRadius.circular(10),
                         ),
-                        child: const Icon(
-                          Icons.play_circle_outline_rounded,
-                          color: AppColors.primary,
-                        ),
+                        child: const Icon(Icons.play_circle_outline_rounded,
+                            color: AppColors.primary),
                       ),
-                      title: Text(
-                        video['title'] ?? 'Unknown video',
-                        style: AppTextStyles.h3,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
+                      title: Text(video['title'] ?? 'Unknown video',
+                          style: AppTextStyles.h3,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis),
                       subtitle: Text(
                         '${course['title'] ?? ''} • ${video['duration'] ?? ''}',
                         style: AppTextStyles.caption,
                       ),
-                      trailing: Text(
-                        timeAgo,
-                        style: AppTextStyles.caption.copyWith(
-                          color: AppColors.textHint,
-                        ),
-                      ),
+                      trailing: Text(timeAgo,
+                          style: AppTextStyles.caption
+                              .copyWith(color: AppColors.textHint)),
                     );
                   },
                 ),
@@ -885,8 +1103,9 @@ class _MenuGroup extends StatelessWidget {
         border: Border.all(color: AppColors.cardBorder),
       ),
       child: Column(
-        children: List.generate(items.length, (i) {
-          return Column(
+        children: List.generate(
+          items.length,
+          (i) => Column(
             children: [
               items[i],
               if (i < items.length - 1)
@@ -897,8 +1116,8 @@ class _MenuGroup extends StatelessWidget {
                   endIndent: 16,
                 ),
             ],
-          );
-        }),
+          ),
+        ),
       ),
     );
   }
@@ -921,8 +1140,7 @@ class _MenuItem extends StatelessWidget {
     return ListTile(
       onTap: onTap,
       leading: Container(
-        width: 38,
-        height: 38,
+        width: 38, height: 38,
         decoration: BoxDecoration(
           color: AppColors.primary.withOpacity(0.08),
           borderRadius: BorderRadius.circular(10),
@@ -930,13 +1148,9 @@ class _MenuItem extends StatelessWidget {
         child: Icon(icon, color: AppColors.primary, size: 20),
       ),
       title: Text(label, style: AppTextStyles.bodyLarge),
-      trailing:
-          trailing ??
-          const Icon(
-            Icons.chevron_right_rounded,
-            color: AppColors.textHint,
-            size: 22,
-          ),
+      trailing: trailing ??
+          const Icon(Icons.chevron_right_rounded,
+              color: AppColors.textHint, size: 22),
     );
   }
 }
@@ -953,13 +1167,9 @@ class _Badge extends StatelessWidget {
         color: AppColors.error,
         borderRadius: BorderRadius.circular(100),
       ),
-      child: Text(
-        '$count',
-        style: AppTextStyles.caption.copyWith(
-          color: Colors.white,
-          fontWeight: FontWeight.w700,
-        ),
-      ),
+      child: Text('$count',
+          style: AppTextStyles.caption.copyWith(
+              color: Colors.white, fontWeight: FontWeight.w700)),
     );
   }
 }
@@ -976,18 +1186,19 @@ class _LogoutButton extends StatelessWidget {
         height: 54,
         decoration: BoxDecoration(
           color: AppColors.error.withOpacity(0.08),
-          borderRadius: BorderRadius.circular(AppConstants.radiusL),
+          borderRadius:
+              BorderRadius.circular(AppConstants.radiusL),
           border: Border.all(color: AppColors.error.withOpacity(0.2)),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.logout_rounded, color: AppColors.error, size: 20),
+            const Icon(Icons.logout_rounded,
+                color: AppColors.error, size: 20),
             const SizedBox(width: 10),
-            Text(
-              'Log Out',
-              style: AppTextStyles.labelLarge.copyWith(color: AppColors.error),
-            ),
+            Text('Log Out',
+                style: AppTextStyles.labelLarge
+                    .copyWith(color: AppColors.error)),
           ],
         ),
       ),

@@ -1,134 +1,158 @@
+import 'package:e_learning/core/erros/app_error_widget.dart';
+import 'package:e_learning/core/erros/app_exceptions.dart';
 import 'package:e_learning/core/theme/app_colors.dart';
 import 'package:e_learning/core/theme/text_styles.dart';
 import 'package:e_learning/features/courses/data/model/courses.dart';
+import 'package:e_learning/features/courses/data/repo/course_repo.dart';
 import 'package:e_learning/features/home/presentaion/view/courses_details.dart';
-import 'package:e_learning/features/watchlist/presentation/logic/watchlist.dart';
+import 'package:e_learning/features/watchlist/presentation/logic/wishlist_cubit.dart';
+import 'package:e_learning/features/watchlist/presentation/logic/wishlist_states.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
-class SavedCoursesScreen extends StatefulWidget {
+class SavedCoursesScreen extends StatelessWidget {
   final String userId;
   const SavedCoursesScreen({super.key, required this.userId});
 
   @override
-  State<SavedCoursesScreen> createState() => _SavedCoursesScreenState();
+  Widget build(BuildContext context) {
+    final existingCubit = context.read<WishlistCubit?>();
+
+    if (existingCubit != null) {
+      existingCubit.load();
+      return const _SavedCoursesBody();
+    }
+
+    return BlocProvider(
+      create: (_) =>
+          WishlistCubit(CoursesRepo(), userId: userId)..load(),
+      child: const _SavedCoursesBody(),
+    );
+  }
 }
 
-class _SavedCoursesScreenState extends State<SavedCoursesScreen> {
-  @override
-  void initState() {
-    super.initState();
-    WishlistNotifier().load(widget.userId);
-    WishlistNotifier().addListener(_rebuild);
-  }
-
-  @override
-  void dispose() {
-    WishlistNotifier().removeListener(_rebuild);
-    super.dispose();
-  }
-
-  void _rebuild() => setState(() {});
+class _SavedCoursesBody extends StatelessWidget {
+  const _SavedCoursesBody();
 
   @override
   Widget build(BuildContext context) {
-    final courses = WishlistNotifier().savedCourses;
+    final userId = context.read<WishlistCubit>().userId;
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: CustomScrollView(
-        slivers: [
-          // ── App Bar ───────────────────────────────────────────────────────
-          SliverAppBar(
-            pinned: true,
-            backgroundColor: AppColors.background,
-            elevation: 0,
-            leading: GestureDetector(
-              onTap: () => Navigator.pop(context),
-              child: Container(
-                margin: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: AppColors.cardBorder),
-                ),
-                child: const Icon(Icons.arrow_back_ios_new_rounded,
-                    size: 16, color: AppColors.textPrimary),
-              ),
-            ),
-            title: Text('Saved Courses', style: AppTextStyles.h2),
-            centerTitle: false,
-          ),
+      body: BlocBuilder<WishlistCubit, WishlistState>(
+        builder: (context, state) {
+          final isLoading = state is WishlistLoading;
+          final courses =
+              state is WishlistLoaded ? state.courses : <CourseModel>[];
 
-          // ── Count ─────────────────────────────────────────────────────────
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
-              child: Text(
-                '${courses.length} course${courses.length != 1 ? 's' : ''} saved',
-                style: AppTextStyles.bodyMedium
-                    .copyWith(color: AppColors.textSecondary),
-              ),
-            ),
-          ),
-
-          // ── Empty State ───────────────────────────────────────────────────
-          if (courses.isEmpty)
-            SliverFillRemaining(
-              child: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(24),
-                      decoration: BoxDecoration(
-                        color: AppColors.primary.withOpacity(0.06),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(Icons.bookmark_border_rounded,
-                          size: 48, color: AppColors.primary),
+          return CustomScrollView(
+            slivers: [
+              SliverAppBar(
+                pinned: true,
+                backgroundColor: AppColors.background,
+                elevation: 0,
+                leading: GestureDetector(
+                  onTap: () => Navigator.pop(context),
+                  child: Container(
+                    margin: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: AppColors.cardBorder),
                     ),
-                    const SizedBox(height: 20),
-                    Text('No saved courses yet',
-                        style: AppTextStyles.h2),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Tap the bookmark icon on any course\nto save it for later',
-                      style: AppTextStyles.bodyMedium
-                          .copyWith(color: AppColors.textSecondary),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                ),
-              ),
-            )
-          else
-            // ── Courses List ────────────────────────────────────────────────
-            SliverPadding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              sliver: SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (ctx, i) => _SavedCourseCard(
-                    course: courses[i],
-                    userId: widget.userId,
-                    onTap: () => Navigator.push(
-                      ctx,
-                      MaterialPageRoute(
-                        builder: (_) => CourseDetailsScreen(
-                          course: courses[i],
-                          userId: widget.userId,
-                        ),
-                      ),
-                    ),
-                    onRemove: () =>
-                        WishlistNotifier().toggle(widget.userId, courses[i]),
+                    child: const Icon(Icons.arrow_back_ios_new_rounded,
+                        size: 16, color: AppColors.textPrimary),
                   ),
-                  childCount: courses.length,
+                ),
+                title: Text('Saved Courses', style: AppTextStyles.h2),
+                centerTitle: false,
+              ),
+
+              // Count
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+                  child: Text(
+                    '${courses.length} course${courses.length != 1 ? 's' : ''} saved',
+                    style: AppTextStyles.bodyMedium
+                        .copyWith(color: AppColors.textSecondary),
+                  ),
                 ),
               ),
-            ),
 
-          const SliverToBoxAdapter(child: SizedBox(height: 32)),
-        ],
+              // ✅ Error State
+              if (state is WishlistError)
+                SliverFillRemaining(
+                  child: AppErrorWidget(
+                    exception: UnknownException(state.message),
+                    onRetry: () =>
+                        context.read<WishlistCubit>().reload(),
+                  ),
+                )
+              else if (isLoading)
+                const SliverFillRemaining(
+                    child: Center(child: CircularProgressIndicator()))
+              else if (courses.isEmpty)
+                SliverFillRemaining(
+                  child: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(24),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withOpacity(0.06),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                              Icons.bookmark_border_rounded,
+                              size: 48,
+                              color: AppColors.primary),
+                        ),
+                        const SizedBox(height: 20),
+                        Text('No saved courses yet',
+                            style: AppTextStyles.h2),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Tap the bookmark icon on any course\nto save it for later',
+                          style: AppTextStyles.bodyMedium
+                              .copyWith(color: AppColors.textSecondary),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              else
+                SliverPadding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  sliver: SliverList(
+                    delegate: SliverChildBuilderDelegate(
+                      (ctx, i) => _SavedCourseCard(
+                        course: courses[i],
+                        onTap: () => Navigator.push(
+                          ctx,
+                          MaterialPageRoute(
+                            builder: (_) => CourseDetailsScreen(
+                              course: courses[i],
+                              userId: userId,
+                            ),
+                          ),
+                        ),
+                        onRemove: () => context
+                            .read<WishlistCubit>()
+                            .toggle(courses[i]),
+                      ),
+                      childCount: courses.length,
+                    ),
+                  ),
+                ),
+
+              const SliverToBoxAdapter(child: SizedBox(height: 32)),
+            ],
+          );
+        },
       ),
     );
   }
@@ -139,13 +163,11 @@ class _SavedCoursesScreenState extends State<SavedCoursesScreen> {
 // ─────────────────────────────────────────────
 class _SavedCourseCard extends StatelessWidget {
   final CourseModel course;
-  final String userId;
   final VoidCallback onTap;
   final VoidCallback onRemove;
 
   const _SavedCourseCard({
     required this.course,
-    required this.userId,
     required this.onTap,
     required this.onRemove,
   });
@@ -171,7 +193,6 @@ class _SavedCourseCard extends StatelessWidget {
         ),
         child: Row(
           children: [
-            // Thumbnail
             ClipRRect(
               borderRadius: BorderRadius.circular(12),
               child: Image.network(
@@ -190,13 +211,10 @@ class _SavedCourseCard extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 14),
-
-            // Info
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Category
                   Text(
                     course.category.toUpperCase(),
                     style: AppTextStyles.caption.copyWith(
@@ -206,15 +224,11 @@ class _SavedCourseCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 4),
-                  // Title
-                  Text(
-                    course.title,
-                    style: AppTextStyles.h3,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
+                  Text(course.title,
+                      style: AppTextStyles.h3,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis),
                   const SizedBox(height: 6),
-                  // Meta
                   Row(
                     children: [
                       const Icon(Icons.star_rounded,
@@ -234,8 +248,6 @@ class _SavedCourseCard extends StatelessWidget {
                 ],
               ),
             ),
-
-            // Remove Button
             GestureDetector(
               onTap: onRemove,
               child: Container(

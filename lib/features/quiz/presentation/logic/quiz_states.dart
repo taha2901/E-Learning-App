@@ -1,54 +1,67 @@
+// ─────────────────────────────────────────────
+// quiz_states.dart  —  Student quiz states ONLY
+// ─────────────────────────────────────────────
+
 import 'package:e_learning/core/erros/app_exceptions.dart';
 import 'package:e_learning/features/quiz/data/model/quiz_model.dart';
 
 abstract class QuizState {}
 
+/// Initial state before anything loads
 class QuizInitial extends QuizState {}
 
+/// Loading quiz from backend
 class QuizLoading extends QuizState {}
 
-class QuizNotFound extends QuizState {}
-
+/// Quiz loaded, waiting for student to start
 class QuizLoaded extends QuizState {
   final QuizModel quiz;
   final QuizResult? previousResult;
   QuizLoaded({required this.quiz, this.previousResult});
 }
 
+/// No quiz found for this video
+class QuizNotFound extends QuizState {}
+
+/// Quiz is actively in progress
 class QuizInProgress extends QuizState {
   final QuizModel quiz;
   final int currentIndex;
   final int secondsLeft;
-  final Map<int, String> answers;
   final String? selectedAnswer;
   final bool answered;
+  final Map<int, String> answers;
 
   QuizInProgress({
     required this.quiz,
     required this.currentIndex,
     required this.secondsLeft,
-    this.answers = const {},
     this.selectedAnswer,
     this.answered = false,
+    this.answers = const {},
   });
 
   QuizInProgress copyWith({
     int? currentIndex,
     int? secondsLeft,
-    Map<int, String>? answers,
     String? selectedAnswer,
     bool? answered,
-  }) =>
-      QuizInProgress(
-        quiz: quiz,
-        currentIndex: currentIndex ?? this.currentIndex,
-        secondsLeft: secondsLeft ?? this.secondsLeft,
-        answers: answers ?? this.answers,
-        selectedAnswer: selectedAnswer,
-        answered: answered ?? this.answered,
-      );
+    Map<int, String>? answers,
+    bool clearSelectedAnswer = false,
+  }) {
+    return QuizInProgress(
+      quiz: quiz,
+      currentIndex: currentIndex ?? this.currentIndex,
+      secondsLeft: secondsLeft ?? this.secondsLeft,
+      selectedAnswer:
+          clearSelectedAnswer ? null : selectedAnswer ?? this.selectedAnswer,
+      answered: answered ?? this.answered,
+      answers: answers ?? this.answers,
+    );
+  }
 }
 
+/// Quiz finished — carries final result
 class QuizFinished extends QuizState {
   final QuizModel quiz;
   final int score;
@@ -67,33 +80,8 @@ class QuizFinished extends QuizState {
   });
 }
 
-// ── Error state — typed ───────────────────────────────────────────────────────
+/// Non-fatal or fatal quiz error
 class QuizError extends QuizState {
   final AppException exception;
   QuizError(this.exception);
-}
-
-// ── Admin States ──────────────────────────────────────────────────────────────
-class AdminQuizLoading extends QuizState {}
-
-class AdminQuizLoaded extends QuizState {
-  final List<QuizModel> quizzes;
-  AdminQuizLoaded(this.quizzes);
-}
-
-class AdminQuizError extends QuizState {
-  final AppException exception;
-  AdminQuizError(this.exception);
-}
-
-class AdminQuizSaved extends QuizState {
-  final QuizModel quiz;
-  AdminQuizSaved(this.quiz);
-}
-
-class AdminVideosLoading extends QuizState {}
-
-class AdminVideosLoaded extends QuizState {
-  final List<Map<String, dynamic>> videos;
-  AdminVideosLoaded(this.videos);
 }

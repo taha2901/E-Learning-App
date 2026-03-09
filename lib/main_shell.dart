@@ -1,6 +1,6 @@
 import 'package:e_learning/features/courses/data/repo/course_repo.dart';
 import 'package:e_learning/features/courses/presentation/cubit/course_cubit.dart';
-import 'package:e_learning/features/courses/presentation/view/courses_screen.dart';
+import 'package:e_learning/features/courses/presentation/view/my_courses_screen.dart';
 import 'package:e_learning/features/home/presentaion/view/home_screen.dart';
 import 'package:e_learning/features/notificatio/data/repo/notification_repo.dart';
 import 'package:e_learning/features/notificatio/presentation/logic/notification_cubit.dart';

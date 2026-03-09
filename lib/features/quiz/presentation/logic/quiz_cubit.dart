@@ -1,3 +1,7 @@
+// ─────────────────────────────────────────────
+// quiz_cubit.dart  —  Student quiz logic ONLY
+// ─────────────────────────────────────────────
+
 import 'dart:async';
 import 'package:bloc/bloc.dart';
 import 'package:e_learning/core/erros/app_exceptions.dart';
@@ -56,8 +60,7 @@ class QuizCubit extends Cubit<QuizState> {
     if (s.answered) return;
 
     _cancelTimer();
-    final newAnswers = Map<int, String>.from(s.answers)
-      ..[s.currentIndex] = letter;
+    final newAnswers = Map<int, String>.from(s.answers)..[s.currentIndex] = letter;
 
     emit(s.copyWith(
       selectedAnswer: letter,
@@ -77,7 +80,7 @@ class QuizCubit extends Cubit<QuizState> {
       _cancelTimer();
       emit(s.copyWith(
         currentIndex: s.currentIndex + 1,
-        selectedAnswer: null,
+        clearSelectedAnswer: true,
         answered: false,
         secondsLeft: _totalSeconds,
       ));
@@ -91,9 +94,7 @@ class QuizCubit extends Cubit<QuizState> {
   void _onTimeExpired() {
     if (state is! QuizInProgress) return;
     final s = state as QuizInProgress;
-    if (!s.answered) {
-      _nextQuestion();
-    }
+    if (!s.answered) _nextQuestion();
   }
 
   // ── Finish quiz ───────────────────────────────────────────────────────────
@@ -112,7 +113,7 @@ class QuizCubit extends Cubit<QuizState> {
 
     final userId = Supabase.instance.client.auth.currentUser?.id ?? '';
     if (userId.isNotEmpty) {
-      // ✅ saveResult — لو فشل ما نوقفش الـ quiz
+      // silent — save result shouldn't block the flow
       try {
         await _repo.saveResult(QuizResult(
           userId: userId,
@@ -122,11 +123,9 @@ class QuizCubit extends Cubit<QuizState> {
           percentage: pct,
           passed: passed,
         ));
-      } catch (_) {
-        // silent — الـ result يتحفظ في الخلفية بس ما نوقفش الـ flow
-      }
+      } catch (_) {}
 
-      // ✅ Notification — silent أيضاً
+      // silent — notification shouldn't block the flow
       try {
         NotificationRepo().createNotification(
           userId: userId,
@@ -176,122 +175,6 @@ class QuizCubit extends Cubit<QuizState> {
   void _cancelTimer() {
     _timer?.cancel();
     _timer = null;
-  }
-
-  // ── Admin: Load all quizzes ───────────────────────────────────────────────
-  Future<void> loadAllQuizzes() async {
-    emit(AdminQuizLoading());
-    try {
-      final quizzes = await _repo.fetchAllQuizzes();
-      emit(AdminQuizLoaded(quizzes));
-    } on AppException catch (e) {
-      emit(AdminQuizError(e));
-    } catch (e) {
-      emit(AdminQuizError(NetworkExceptionHandler.handle(e)));
-    }
-  }
-
-  // ── Admin: Load videos for a course ──────────────────────────────────────
-  Future<void> loadVideosForCourse(String courseId) async {
-    emit(AdminVideosLoading());
-    try {
-      final videos = await _repo.fetchVideosForCourse(courseId);
-      emit(AdminVideosLoaded(videos));
-    } catch (_) {
-      emit(AdminVideosLoaded([]));
-    }
-  }
-
-  // ── Admin: Create quiz ────────────────────────────────────────────────────
-  Future<QuizModel?> createQuiz({
-    required String videoId,
-    required String courseId,
-    required String title,
-    required String description,
-    required int passScore,
-  }) async {
-    try {
-      final quizId = await _repo.createQuiz(
-        videoId: videoId,
-        courseId: courseId,
-        title: title,
-        description: description,
-        passScore: passScore,
-      );
-      if (quizId == null) return null;
-      return QuizModel(
-        id: quizId,
-        videoId: videoId,
-        courseId: courseId,
-        title: title,
-        description: description,
-        passScore: passScore,
-        questions: [],
-      );
-    } on AppException {
-      rethrow;
-    } catch (e) {
-      throw NetworkExceptionHandler.handle(e);
-    }
-  }
-
-  // ── Admin: Add question ───────────────────────────────────────────────────
-  Future<void> addQuestion({
-    required String quizId,
-    required String videoId,
-    required String question,
-    required String optionA,
-    required String optionB,
-    required String optionC,
-    required String optionD,
-    required String correctAnswer,
-    required int orderIndex,
-  }) async {
-    try {
-      await _repo.addQuestion(
-        quizId: quizId,
-        question: question,
-        optionA: optionA,
-        optionB: optionB,
-        optionC: optionC,
-        optionD: optionD,
-        correctAnswer: correctAnswer,
-        orderIndex: orderIndex,
-      );
-      final quiz = await _repo.fetchQuizForVideo(videoId);
-      if (quiz != null) {
-        emit(AdminQuizSaved(quiz));
-      }
-    } on AppException {
-      rethrow;
-    } catch (e) {
-      throw NetworkExceptionHandler.handle(e);
-    }
-  }
-
-  // ── Admin: Delete quiz ────────────────────────────────────────────────────
-  Future<void> deleteQuiz(String quizId) async {
-    try {
-      await _repo.deleteQuiz(quizId);
-      await loadAllQuizzes();
-    } on AppException {
-      rethrow;
-    } catch (e) {
-      throw NetworkExceptionHandler.handle(e);
-    }
-  }
-
-  // ── Admin: Delete question ────────────────────────────────────────────────
-  Future<void> deleteQuestion(String questionId, String videoId) async {
-    try {
-      await _repo.deleteQuestion(questionId);
-      final quiz = await _repo.fetchQuizForVideo(videoId);
-      if (quiz != null) emit(AdminQuizSaved(quiz));
-    } on AppException {
-      rethrow;
-    } catch (e) {
-      throw NetworkExceptionHandler.handle(e);
-    }
   }
 
   @override

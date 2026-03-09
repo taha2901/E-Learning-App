@@ -9,7 +9,7 @@
 
 import 'package:e_learning/core/theme/app_colors.dart';
 import 'package:e_learning/core/theme/text_styles.dart';
-import 'package:e_learning/features/admin_panel/add_courses/presentation/view/add_courses.dart';
+import 'package:e_learning/features/admin_panel/add_courses/presentation/view/admin_courses_screen.dart';
 import 'package:e_learning/features/admin_panel/create_quiz/presentation/view/admin_quiz_screen.dart';
 import 'package:e_learning/features/auth/presentaion/view/login_screen.dart';
 import 'package:flutter/material.dart';

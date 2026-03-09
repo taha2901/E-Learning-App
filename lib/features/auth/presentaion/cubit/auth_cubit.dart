@@ -1,9 +1,6 @@
-// auth_cubit.dart — ✅ بعد login بنجيب الـ role ونبعته في LoginSuccess
-
 import 'dart:io';
 import 'package:e_learning/features/auth/presentaion/cubit/auth_states.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
 import '../../data/repo/auth_repo.dart';
 
 class AuthCubit extends Cubit<AuthState> {
@@ -26,7 +23,6 @@ class AuthCubit extends Cubit<AuthState> {
       }
       userId = currentUser.id;
 
-      // ✅ جيب الـ role من Supabase
       final role = await repo.fetchUserRole(userId!);
       userRole = role;
 
@@ -57,7 +53,6 @@ class AuthCubit extends Cubit<AuthState> {
         avatarUrl: avatarUrl,
       );
       userId = user.id;
-      // ✅ Register دايماً student
       emit(SignUpSuccess(userId!));
     });
   }

@@ -1,17 +1,18 @@
 import 'package:e_learning/core/constants/app_constants.dart';
 import 'package:e_learning/core/theme/app_colors.dart';
 import 'package:e_learning/core/theme/text_styles.dart';
-import 'package:e_learning/core/widgets/custom_btn.dart';
-import 'package:e_learning/core/widgets/custom_text_feild.dart';
 import 'package:e_learning/features/admin_panel/add_courses/presentation/view/instructor_dashboard.dart';
-import 'package:e_learning/features/auth/data/repo/auth_repo.dart';
 import 'package:e_learning/features/auth/presentaion/cubit/auth_cubit.dart';
 import 'package:e_learning/features/auth/presentaion/cubit/auth_states.dart';
-import 'package:e_learning/features/auth/presentaion/view/register_screen.dart';
+import 'package:e_learning/features/auth/presentaion/view/widget/login/login_brand_header.dart';
+import 'package:e_learning/features/auth/presentaion/view/widget/login/login_form_section.dart';
+import 'package:e_learning/features/auth/presentaion/view/widget/login/login_or_divider.dart';
+import 'package:e_learning/features/auth/presentaion/view/widget/login/login_sign_up_footer.dart';
+import 'package:e_learning/features/auth/presentaion/view/widget/login/login_social_button.dart';
+import 'package:e_learning/features/auth/presentaion/view/widget/login/login_submit_button.dart';
 import 'package:e_learning/main_shell.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -22,17 +23,16 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  final emailController = TextEditingController();
-  final passwordController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
 
-  // ── inline error messages (من الـ server)
   String? _emailError;
   String? _passwordError;
 
   @override
   void dispose() {
-    emailController.dispose();
-    passwordController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
     super.dispose();
   }
 
@@ -45,7 +45,7 @@ class _LoginScreenState extends State<LoginScreen> {
       _passwordError = null;
     });
 
-    // ── Network & Timeout (جديد) ──────────────────────────────────
+    // ── Network & Timeout ─────────────────────────────────────────
     if (msg.contains('no internet') ||
         msg.contains('failed host lookup') ||
         msg.contains('network is unreachable') ||
@@ -77,7 +77,7 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
 
-    // ── Auth errors (موجودة عندك) ─────────────────────────────────
+    // ── Auth errors ───────────────────────────────────────────────
     if (msg.contains('invalid login credentials') ||
         msg.contains('invalid credentials') ||
         msg.contains('wrong password') ||
@@ -107,11 +107,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
     _formKey.currentState?.validate();
   }
-  void _showSnack(
-    String msg, {
-    IconData icon = Icons.info_outline_rounded,
-    Color? color,
-  }) {
+
+  void _showSnack(String msg, {IconData icon = Icons.info_outline_rounded, Color? color}) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Row(
@@ -129,9 +126,7 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  void _login() {
-    print("Login pressed");
-    // clear server errors أول ما اليوزر يحاول تاني
+  void _onLogin() {
     setState(() {
       _emailError = null;
       _passwordError = null;
@@ -139,372 +134,97 @@ class _LoginScreenState extends State<LoginScreen> {
 
     if (_formKey.currentState!.validate()) {
       context.read<AuthCubit>().login(
-        email: emailController.text.trim(),
-        password: passwordController.text.trim(),
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
       );
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Builder(
-      builder: (context) {
-        return BlocListener<AuthCubit, AuthState>(
-          listener: (context, state) {
-            if (state is LoginSuccess) {
-              Future.delayed(const Duration(milliseconds: 300), () {
-                if (!mounted) return;
-    
-                if (state.role == 'instructor' || state.role == 'admin') {
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) =>
-                          InstructorDashboard(userId: state.userId),
-                    ),
-                  );
-                } else {
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => MainShell(userId: state.userId),
-                    ),
-                  );
-                }
-              });
-            }
-    
-            if (state is LoginFailure) {
-              _handleAuthError(state.message);
-            }
-          },
-          child: Scaffold(
-            backgroundColor: AppColors.background,
-            body: SafeArea(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppConstants.horizontalPadding,
-                ),
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const SizedBox(height: 48),
-                      const _BrandHeader(),
-                      const SizedBox(height: 40),
-                      Text(
-                        'Welcome back 👋',
-                        style: AppTextStyles.displayMedium,
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Sign in to continue your learning journey',
-                        style: AppTextStyles.bodyMedium,
-                      ),
-                      const SizedBox(height: 36),
-    
-                      // ── Email field
-                      AppTextField(
-                        label: 'Email Address',
-                        hint: 'you@example.com',
-                        prefixIcon: Icons.email_outlined,
-                        controller: emailController,
-                        keyboardType: TextInputType.emailAddress,
-                        onChanged: (_) {
-                          if (_emailError != null) {
-                            setState(() => _emailError = null);
-                          }
-                        },
-                        validator: (v) {
-                          if (_emailError != null) return _emailError;
-                          if (v == null || v.isEmpty)
-                            return 'Enter your email';
-                          if (!RegExp(
-                            r'^[\w\.\+\-]+@[\w\-]+\.[a-zA-Z]{2,}$',
-                          ).hasMatch(v)) {
-                            return 'Enter a valid email address';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 20),
-    
-                      // ── Password field
-                      AppTextField(
-                        label: 'Password',
-                        hint: '••••••••',
-                        prefixIcon: Icons.lock_outline_rounded,
-                        isPassword: true,
-                        controller: passwordController,
-                        onChanged: (_) {
-                          if (_passwordError != null) {
-                            setState(() => _passwordError = null);
-                          }
-                        },
-                        validator: (v) {
-                          if (_passwordError != null) return _passwordError;
-                          if (v == null || v.isEmpty)
-                            return 'Enter your password';
-                          if (v.length < 6) return 'Password is too short';
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 8),
-    
-                      // Forgot password
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: GestureDetector(
-                          onTap: () => _showForgotPasswordDialog(context),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 4),
-                            child: Text(
-                              'Forgot password?',
-                              style: AppTextStyles.bodySmall.copyWith(
-                                color: AppColors.primary,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-    
-                      // ── Sign In button
-                      BlocBuilder<AuthCubit, AuthState>(
-                        builder: (context, state) {
-                          if (state is LoginLoading) {
-                            return Container(
-                              height: 54,
-                              decoration: BoxDecoration(
-                                gradient: AppColors.primaryGradient,
-                                borderRadius: BorderRadius.circular(14),
-                              ),
-                              child: const Center(
-                                child: CircularProgressIndicator(
-                                  color: Colors.white,
-                                  strokeWidth: 2.5,
-                                ),
-                              ),
-                            );
-                          }
-                          return AppPrimaryButton(
-                            label: 'Sign In',
-                            onTap: _login,
-                          );
-                        },
-                      ),
-                      const SizedBox(height: 32),
-                      const _OrDivider(),
-                      const SizedBox(height: 32),
-                      _SocialLoginButton(
-                        icon: Icons.g_mobiledata_rounded,
-                        label: 'Continue with Google',
-                        onTap: () {},
-                      ),
-                      const SizedBox(height: 40),
-                      Center(
-                        child: GestureDetector(
-                          onTap: () => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const RegisterScreen(),
-                            ),
-                          ),
-                          child: RichText(
-                            text: TextSpan(
-                              text: "Don't have an account? ",
-                              style: AppTextStyles.bodyMedium,
-                              children: [
-                                TextSpan(
-                                  text: 'Sign Up',
-                                  style: AppTextStyles.labelMedium.copyWith(
-                                    color: AppColors.primary,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 32),
-                    ],
-                  ),
-                ),
-              ),
-            ),
+  void _onLoginSuccess(LoginSuccess state) {
+    Future.delayed(const Duration(milliseconds: 300), () {
+      if (!mounted) return;
+
+      if (state.role == 'instructor' || state.role == 'admin') {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => InstructorDashboard(userId: state.userId),
           ),
         );
+      } else {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => MainShell(userId: state.userId),
+          ),
+        );
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocListener<AuthCubit, AuthState>(
+      listener: (context, state) {
+        if (state is LoginSuccess) _onLoginSuccess(state);
+        if (state is LoginFailure) _handleAuthError(state.message);
       },
-    );
-  }
+      child: Scaffold(
+        backgroundColor: AppColors.background,
+        body: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppConstants.horizontalPadding,
+            ),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 48),
+                  const LoginBrandHeader(),
+                  const SizedBox(height: 40),
+                  Text('Welcome back 👋', style: AppTextStyles.displayMedium),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Sign in to continue your learning journey',
+                    style: AppTextStyles.bodyMedium,
+                  ),
+                  const SizedBox(height: 36),
 
-  void _showForgotPasswordDialog(BuildContext context) {
-    final ctrl = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.surface,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text('Reset Password', style: AppTextStyles.h2),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              "Enter your email and we'll send you a reset link.",
-              style: AppTextStyles.bodySmall.copyWith(
-                color: AppColors.textSecondary,
-              ),
-            ),
-            const SizedBox(height: 16),
-            AppTextField(
-              label: 'Email Address',
-              hint: 'you@example.com',
-              prefixIcon: Icons.email_outlined,
-              controller: ctrl,
-              keyboardType: TextInputType.emailAddress,
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(
-              'Cancel',
-              style: AppTextStyles.bodySmall.copyWith(
-                color: AppColors.textSecondary,
+                  LoginFormSection(
+                    emailController: _emailController,
+                    passwordController: _passwordController,
+                    emailError: _emailError,
+                    passwordError: _passwordError,
+                    onEmailErrorClear: () {
+                      if (_emailError != null) setState(() => _emailError = null);
+                    },
+                    onPasswordErrorClear: () {
+                      if (_passwordError != null) setState(() => _passwordError = null);
+                    },
+                  ),
+                  const SizedBox(height: 24),
+
+                  LoginSubmitButton(onTap: _onLogin),
+                  const SizedBox(height: 32),
+
+                  const LoginOrDivider(),
+                  const SizedBox(height: 32),
+
+                  LoginSocialButton(
+                    icon: Icons.g_mobiledata_rounded,
+                    label: 'Continue with Google',
+                    onTap: () {},
+                  ),
+                  const SizedBox(height: 40),
+
+                  const LoginSignUpFooter(),
+                  const SizedBox(height: 32),
+                ],
               ),
             ),
           ),
-          ElevatedButton(
-            onPressed: () async {
-              Navigator.pop(ctx);
-              if (ctrl.text.trim().isEmpty) return;
-              try {
-                await Supabase.instance.client.auth.resetPasswordForEmail(
-                  ctrl.text.trim(),
-                );
-                if (context.mounted) {
-                  _showSnack(
-                    'Reset link sent! Check your email.',
-                    icon: Icons.mark_email_read_outlined,
-                    color: AppColors.success,
-                  );
-                }
-              } catch (_) {
-                if (context.mounted) {
-                  _showSnack('Could not send reset email. Try again.');
-                }
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-            child: Text('Send Link', style: AppTextStyles.labelMedium),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────
-// Brand Header
-// ─────────────────────────────────────────────
-class _BrandHeader extends StatelessWidget {
-  const _BrandHeader();
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Container(
-          width: 48,
-          height: 48,
-          decoration: BoxDecoration(
-            gradient: AppColors.primaryGradient,
-            borderRadius: BorderRadius.circular(14),
-          ),
-          child: const Icon(
-            Icons.school_rounded,
-            color: Colors.white,
-            size: 26,
-          ),
-        ),
-        const SizedBox(width: 12),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              AppConstants.appName,
-              style: AppTextStyles.h1.copyWith(color: AppColors.primary),
-            ),
-            Text(AppConstants.appTagline, style: AppTextStyles.caption),
-          ],
-        ),
-      ],
-    );
-  }
-}
-
-class _OrDivider extends StatelessWidget {
-  const _OrDivider();
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        const Expanded(child: Divider(color: AppColors.cardBorder)),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Text('or', style: AppTextStyles.bodySmall),
-        ),
-        const Expanded(child: Divider(color: AppColors.cardBorder)),
-      ],
-    );
-  }
-}
-
-class _SocialLoginButton extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-
-  const _SocialLoginButton({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        height: 54,
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(AppConstants.radiusL),
-          border: Border.all(color: AppColors.cardBorder),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, color: AppColors.textPrimary, size: 26),
-            const SizedBox(width: 10),
-            Text(
-              label,
-              style: AppTextStyles.labelMedium.copyWith(
-                color: AppColors.textPrimary,
-              ),
-            ),
-          ],
         ),
       ),
     );

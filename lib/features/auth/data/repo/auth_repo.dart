@@ -67,7 +67,7 @@ class AuthRepo {
           .timeout(_timeout);
 
       if (res == null) return 'student';
-      return (res as Map<String, dynamic>)['role'] as String? ?? 'student';
+      return (res)['role'] as String? ?? 'student';
     } catch (_) {
       return 'student'; // graceful fallback — role fetch failure never blocks login
     }

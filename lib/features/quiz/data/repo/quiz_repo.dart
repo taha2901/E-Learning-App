@@ -1,4 +1,7 @@
-import 'package:e_learning/core/erros/app_exceptions.dart';
+// ─────────────────────────────────────────────
+// quiz_repo.dart  —  All Supabase calls live here
+// ─────────────────────────────────────────────
+
 import 'package:e_learning/core/erros/network_exception_handler.dart';
 import 'package:e_learning/features/quiz/data/model/quiz_model.dart';
 import 'package:flutter/material.dart';
@@ -6,6 +9,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 class QuizRepo {
   final SupabaseClient _db = Supabase.instance.client;
+
+  // ── Student ───────────────────────────────────────────────────────────────
 
   Future<QuizModel?> fetchQuizForVideo(String videoId) async {
     try {
@@ -69,11 +74,13 @@ class QuizRepo {
           'passed': result.passed,
         });
       } catch (e2) {
+        // silent — result save failure shouldn't block the quiz flow
         debugPrint('saveResult error: $e2');
-        // لا نـ throw هنا — الـ quiz result فشل يتحفظ بس التطبيق ميوقفش
       }
     }
   }
+
+  // ── Admin ─────────────────────────────────────────────────────────────────
 
   Future<List<QuizModel>> fetchAllQuizzes() async {
     try {
@@ -84,6 +91,18 @@ class QuizRepo {
       return list
           .map((e) => QuizModel.fromJson(e as Map<String, dynamic>))
           .toList();
+    } catch (e) {
+      throw NetworkExceptionHandler.handle(e);
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> fetchAllCourses() async {
+    try {
+      final res = await _db
+          .from('courses')
+          .select('id, title')
+          .order('title') as List;
+      return res.cast<Map<String, dynamic>>();
     } catch (e) {
       throw NetworkExceptionHandler.handle(e);
     }

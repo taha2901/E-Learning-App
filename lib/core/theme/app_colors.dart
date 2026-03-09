@@ -6,12 +6,21 @@ class AppColors {
   static const Color primaryLight = Color(0xFF6366F1);
   static const Color primaryDark = Color(0xFF3730A3);
 
+  static const purple = Color(0xFF6C63FF);
+  static const purpleLight = Color(0xFFEEF0FF);
+  static const gold = Color(0xFFD4AF37);
+  static const dark = Color(0xFF1A1A2E);
+  static const grey = Color(0xFF6B7280);
+  static const green = Color(0xFF00C896);
+  static const red = Color(0xFFFF6B6B);
+  static const background = Color(0xFFF5F5FF);
+
   // Accent
   static const Color accent = Color(0xFF06B6D4);
   static const Color accentLight = Color(0xFF22D3EE);
 
   // Backgrounds
-  static const Color background = Color(0xFFF8F9FF);
+  // static const Color background = Color(0xFFF8F9FF);
   static const Color surface = Color(0xFFFFFFFF);
   static const Color surfaceVariant = Color(0xFFF1F2FD);
 

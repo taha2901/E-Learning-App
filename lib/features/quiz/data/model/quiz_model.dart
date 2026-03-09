@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────
-// Models
+// quiz_model.dart  —  Data models only, no logic
 // ─────────────────────────────────────────────
 
 class QuizModel {
@@ -35,6 +35,8 @@ class QuizModel {
       );
 }
 
+// ─────────────────────────────────────────────
+
 class QuizQuestion {
   final String id;
   final String quizId;
@@ -58,13 +60,19 @@ class QuizQuestion {
     required this.orderIndex,
   });
 
+  /// Returns the option text for a given letter (a/b/c/d)
   String optionText(String letter) {
     switch (letter) {
-      case 'a': return optionA;
-      case 'b': return optionB;
-      case 'c': return optionC;
-      case 'd': return optionD;
-      default: return '';
+      case 'a':
+        return optionA;
+      case 'b':
+        return optionB;
+      case 'c':
+        return optionC;
+      case 'd':
+        return optionD;
+      default:
+        return '';
     }
   }
 
@@ -80,6 +88,8 @@ class QuizQuestion {
         orderIndex: json['order_index'] ?? 0,
       );
 }
+
+// ─────────────────────────────────────────────
 
 class QuizResult {
   final String userId;

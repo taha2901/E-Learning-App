@@ -1,8 +1,8 @@
 import 'package:bloc/bloc.dart';
 import 'package:e_learning/core/erros/app_exceptions.dart';
 import 'package:e_learning/core/erros/network_exception_handler.dart';
-import 'package:e_learning/features/courses/data/repo/review_repo.dart';
-import 'package:e_learning/features/courses/presentation/cubit/review_states.dart';
+import 'package:e_learning/features/reviews_sheet/data/repo/review_repo.dart';
+import 'package:e_learning/features/reviews_sheet/presentation/logic/review_states.dart';
 import 'package:e_learning/features/courses/data/model/review_model.dart';
 
 class ReviewCubit extends Cubit<ReviewState> {
@@ -13,13 +13,21 @@ class ReviewCubit extends Cubit<ReviewState> {
   ReviewCubit(this._repo, {required this.courseId, required this.userId})
       : super(ReviewInitial());
 
+  /// ✅ factory — الـ sheet بتستخدمه بدل ما تعمل ReviewRepo() مباشرة
+  factory ReviewCubit.create({
+    required String courseId,
+    required String userId,
+  }) =>
+      ReviewCubit(ReviewRepo(), courseId: courseId, userId: userId);
+
   Future<void> load() async {
     emit(ReviewLoading());
     try {
       final reviews = await _repo.fetchReviews(courseId);
       final summary = ReviewSummary.fromReviews(reviews);
       final myReview = reviews.where((r) => r.userId == userId).firstOrNull;
-      emit(ReviewLoaded(reviews: reviews, summary: summary, myReview: myReview));
+      emit(ReviewLoaded(
+          reviews: reviews, summary: summary, myReview: myReview));
     } catch (e) {
       final ex = e is AppException ? e : NetworkExceptionHandler.handle(e);
       emit(ReviewError(_messageForLoad(ex)));
@@ -63,22 +71,32 @@ class ReviewCubit extends Cubit<ReviewState> {
 
   Future<double> getUpdatedRating() => _repo.fetchCourseRating(courseId);
 
-  // ── Human-readable messages ─────────────────────────────────────
+  // ── Human-readable messages ──────────────────────────────
   String _messageForLoad(AppException e) {
-    if (e is NoInternetException) return 'No internet connection.\nCheck your network to see reviews.';
-    if (e is TimeoutException) return 'Loading reviews timed out.\nPlease try again.';
-    if (e is ServerException) return 'Server error (${e.statusCode}).\nPlease try again later.';
+    if (e is NoInternetException) {
+      return 'No internet connection.\nCheck your network to see reviews.';
+    }
+    if (e is TimeoutException) {
+      return 'Loading reviews timed out.\nPlease try again.';
+    }
+    if (e is ServerException) {
+      return 'Server error (${e.statusCode}).\nPlease try again later.';
+    }
     return 'Could not load reviews.\nPlease try again.';
   }
 
   String _messageForSubmit(AppException e) {
-    if (e is NoInternetException) return 'No internet connection.\nYour review was not submitted.';
+    if (e is NoInternetException) {
+      return 'No internet connection.\nYour review was not submitted.';
+    }
     if (e is TimeoutException) return 'Submission timed out.\nPlease try again.';
     return 'Failed to submit your review.\nPlease try again.';
   }
 
   String _messageForDelete(AppException e) {
-    if (e is NoInternetException) return 'No internet connection.\nCould not delete review.';
+    if (e is NoInternetException) {
+      return 'No internet connection.\nCould not delete review.';
+    }
     return 'Failed to delete review.\nPlease try again.';
   }
 }

@@ -1,9 +1,8 @@
 import 'package:e_learning/core/theme/app_colors.dart';
 import 'package:e_learning/core/theme/text_styles.dart';
 import 'package:e_learning/features/courses/data/model/review_model.dart';
-import 'package:e_learning/features/courses/data/repo/review_repo.dart';
-import 'package:e_learning/features/courses/presentation/cubit/review_cubit.dart';
-import 'package:e_learning/features/courses/presentation/cubit/review_states.dart';
+import 'package:e_learning/features/reviews_sheet/presentation/logic/review_cubit.dart';
+import 'package:e_learning/features/reviews_sheet/presentation/logic/review_states.dart';
 import 'package:e_learning/features/reviews_sheet/presentation/view/widgets/reviews_empty_state.dart';
 import 'package:e_learning/features/reviews_sheet/presentation/view/widgets/reviews_my_review_card.dart';
 import 'package:e_learning/features/reviews_sheet/presentation/view/widgets/reviews_rating_summary.dart';
@@ -13,8 +12,7 @@ import 'package:e_learning/features/reviews_sheet/presentation/view/widgets/revi
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-// ── Entry point ────────────────────────────────────────────────────
-// Returns new rating if user submitted/edited/deleted, or null
+// ── Entry point ────────────────────────────────────────────
 Future<double?> showReviewsSheet(
   BuildContext context, {
   required String courseId,
@@ -26,8 +24,8 @@ Future<double?> showReviewsSheet(
     backgroundColor: Colors.transparent,
     isScrollControlled: true,
     builder: (_) => BlocProvider(
-      create: (_) => ReviewCubit(
-        ReviewRepo(),
+      // ✅ بنستخدم الـ factory بدل ما نعمل ReviewRepo() هنا
+      create: (_) => ReviewCubit.create(
         courseId: courseId,
         userId: userId,
       )..load(),
@@ -36,7 +34,7 @@ Future<double?> showReviewsSheet(
   );
 }
 
-// ── Sheet ──────────────────────────────────────────────────────────
+// ── Sheet ──────────────────────────────────────────────────
 class _ReviewsSheet extends StatelessWidget {
   final String courseTitle;
 
@@ -93,8 +91,8 @@ class _ReviewsSheet extends StatelessWidget {
                           Text('Reviews', style: AppTextStyles.h1),
                           Text(
                             courseTitle,
-                            style: AppTextStyles.bodySmall
-                                .copyWith(color: AppColors.textSecondary),
+                            style: AppTextStyles.bodySmall.copyWith(
+                                color: AppColors.textSecondary),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -167,8 +165,9 @@ class _ReviewsSheet extends StatelessWidget {
               review: state.myReview!,
               onEdit: () =>
                   _openWriteSheet(context, existing: state.myReview),
-              onDelete: () =>
-                  context.read<ReviewCubit>().deleteReview(state.myReview!.id),
+              onDelete: () => context
+                  .read<ReviewCubit>()
+                  .deleteReview(state.myReview!.id),
             ),
           const SizedBox(height: 20),
           if (state.reviews.isEmpty)

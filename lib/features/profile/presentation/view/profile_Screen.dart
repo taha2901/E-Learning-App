@@ -8,6 +8,7 @@ import 'package:e_learning/features/auth/presentaion/view/login_screen.dart';
 import 'package:e_learning/features/notificatio/presentation/logic/notification_cubit.dart';
 import 'package:e_learning/features/notificatio/presentation/logic/notification_states.dart';
 import 'package:e_learning/features/notificatio/presentation/view/notifications_screen.dart';
+import 'package:e_learning/features/profile/data/repo/profile_repo.dart';
 import 'package:e_learning/features/profile/presentation/cubit/profile_cubit.dart';
 import 'package:e_learning/features/profile/presentation/cubit/profile_states.dart';
 import 'package:e_learning/features/profile/presentation/view/widgets/profile/avatar_picker_sheet.dart';
@@ -28,7 +29,8 @@ class ProfileScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) => ProfileCubit()..fetchUser(userId),
+      // ✅ التغيير الوحيد — بنمرر الـ repo للـ cubit
+      create: (_) => ProfileCubit(ProfileRepo())..fetchUser(userId),
       child: Scaffold(
         backgroundColor: AppColors.background,
         body: BlocBuilder<ProfileCubit, ProfileStates>(
@@ -40,7 +42,8 @@ class ProfileScreen extends StatelessWidget {
             if (state is ProfileError) {
               return AppErrorWidget(
                 exception: UnknownException(state.message),
-                onRetry: () => context.read<ProfileCubit>().fetchUser(userId),
+                onRetry: () =>
+                    context.read<ProfileCubit>().fetchUser(userId),
               );
             }
 
@@ -52,8 +55,10 @@ class ProfileScreen extends StatelessWidget {
                     child: ProfileHeader(
                       user: user,
                       userId: userId,
-                      onEditTap: () => _showEditProfile(context, user, userId),
-                      onAvatarTap: () => _showAvatarPicker(context, userId),
+                      onEditTap: () =>
+                          _showEditProfile(context, user, userId),
+                      onAvatarTap: () =>
+                          _showAvatarPicker(context, userId),
                     ),
                   ),
                   SliverToBoxAdapter(child: _StatsRow(user: user)),
@@ -79,8 +84,6 @@ class ProfileScreen extends StatelessWidget {
       ),
     );
   }
-
-  // ── Sheet helpers ────────────────────────────────────────
 
   void _showAvatarPicker(BuildContext context, String userId) {
     showModalBottomSheet(
@@ -110,9 +113,7 @@ class ProfileScreen extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Stats Row
-// ─────────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────
 class _StatsRow extends StatelessWidget {
   final Map<String, dynamic> user;
   const _StatsRow({required this.user});
@@ -151,9 +152,7 @@ class _StatsRow extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Menu Section  (Account / Learning / Support + Logout)
-// ─────────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────
 class _ProfileMenuSection extends StatelessWidget {
   final Map<String, dynamic> user;
   final String userId;
@@ -205,7 +204,7 @@ class _ProfileMenuSection extends StatelessWidget {
             MenuItem(
               icon: Icons.workspace_premium_outlined,
               label: 'My Certificates',
-              onTap: () => _showCertificates(context, user, userId),
+              onTap: () => _showCertificates(context, userId),
             ),
             MenuItem(
               icon: Icons.history_rounded,
@@ -232,15 +231,11 @@ class _ProfileMenuSection extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 24),
-        LogoutButton(
-          onTap: () => _logout(context),
-        ),
+        LogoutButton(onTap: () => _logout(context)),
         const SizedBox(height: 40),
       ],
     );
   }
-
-  // ── Navigation helpers ───────────────────────────────────
 
   void _goToNotifications(BuildContext context) {
     Navigator.push(
@@ -254,11 +249,8 @@ class _ProfileMenuSection extends StatelessWidget {
     );
   }
 
-  void _showCertificates(
-    BuildContext context,
-    Map<String, dynamic> user,
-    String userId,
-  ) {
+  // ✅ اتشال الـ user parameter — مش محتاجينه تاني
+  void _showCertificates(BuildContext context, String userId) {
     showModalBottomSheet(
       context: context,
       backgroundColor: AppColors.surface,
@@ -266,7 +258,7 @@ class _ProfileMenuSection extends StatelessWidget {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (_) => CertificatesSheet(userId: userId, user: user),
+      builder: (_) => CertificatesSheet(userId: userId),
     );
   }
 
@@ -303,8 +295,8 @@ class _ProfileMenuSection extends StatelessWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.surface,
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20)),
         title: Row(
           children: [
             Container(
@@ -335,8 +327,8 @@ class _ProfileMenuSection extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: Text('Close',
-                style: TextStyle(color: AppColors.primary)),
+            child:
+                Text('Close', style: TextStyle(color: AppColors.primary)),
           ),
         ],
       ),
@@ -356,8 +348,6 @@ class _ProfileMenuSection extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────
-// Notifications Badge  (reads from NotificationCubit)
 // ─────────────────────────────────────────────
 class _NotificationsBadge extends StatelessWidget {
   @override

@@ -1,56 +1,34 @@
-// screens/admin_courses_screen.dart
-
 import 'package:e_learning/core/erros/app_error_widget.dart';
-import 'package:e_learning/core/erros/app_exceptions.dart';
-import 'package:e_learning/core/erros/network_exception_handler.dart';
 import 'package:e_learning/core/theme/app_colors.dart';
 import 'package:e_learning/core/theme/text_styles.dart';
 import 'package:e_learning/features/admin_panel/add_courses/data/repo/admin_courses_repo.dart';
+import 'package:e_learning/features/admin_panel/add_courses/presentation/logic/admin_courses_cubit.dart';
+import 'package:e_learning/features/admin_panel/add_courses/presentation/logic/admin_courses_states.dart';
 import 'package:e_learning/features/admin_panel/add_courses/presentation/view/create_edit_course_screen.dart';
 import 'package:e_learning/features/admin_panel/add_courses/presentation/view/manage_videos_screen.dart';
 import 'package:e_learning/features/admin_panel/add_courses/presentation/view/widgets/admin_back_button.dart';
 import 'package:e_learning/features/admin_panel/add_courses/presentation/view/widgets/course_admin_card.dart';
 import 'package:e_learning/features/courses/data/model/courses.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
-class AdminCoursesScreen extends StatefulWidget {
+class AdminCoursesScreen extends StatelessWidget {
   const AdminCoursesScreen({super.key});
 
   @override
-  State<AdminCoursesScreen> createState() => _AdminCoursesScreenState();
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (_) => AdminCoursesCubit(AdminCoursesRepo())..fetchCourses(),
+      child: const _AdminCoursesBody(),
+    );
+  }
 }
 
-class _AdminCoursesScreenState extends State<AdminCoursesScreen> {
-  final _repo = AdminCoursesRepo();
-  List<CourseModel> _courses = [];
-  bool _loading = true;
-  AppException? _loadError;
+// ─────────────────────────────────────────────
+class _AdminCoursesBody extends StatelessWidget {
+  const _AdminCoursesBody();
 
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-
-  Future<void> _load() async {
-    setState(() {
-      _loading = true;
-      _loadError = null;
-    });
-    try {
-      final courses = await _repo.fetchAllCourses();
-      if (mounted) setState(() { _courses = courses; _loading = false; });
-    } on AppException catch (e) {
-      if (mounted) setState(() { _loadError = e; _loading = false; });
-    } catch (e) {
-      if (mounted) setState(() {
-        _loadError = NetworkExceptionHandler.handle(e);
-        _loading = false;
-      });
-    }
-  }
-
-  void _showSnack(String msg, {bool isError = false}) {
+  void _showSnack(BuildContext context, String msg, {bool isError = false}) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(msg),
       backgroundColor: isError ? AppColors.error : AppColors.success,
@@ -59,89 +37,127 @@ class _AdminCoursesScreenState extends State<AdminCoursesScreen> {
     ));
   }
 
-  // ── Navigation helpers ───────────────────────────────────
-
-  Future<void> _goToCreateCourse() async {
-    await Navigator.push(context, MaterialPageRoute(
-      builder: (_) => CreateEditCourseScreen(repo: _repo),
-    ));
-    _load();
-  }
-
-  Future<void> _goToEditCourse(CourseModel course) async {
-    await Navigator.push(context, MaterialPageRoute(
-      builder: (_) => CreateEditCourseScreen(repo: _repo, course: course),
-    ));
-    _load();
-  }
-
-  Future<void> _goToManageVideos(CourseModel course) async {
-    await Navigator.push(context, MaterialPageRoute(
-      builder: (_) => ManageVideosScreen(course: course, repo: _repo),
-    ));
-    _load();
-  }
-
-  Future<void> _deleteCourse(CourseModel course) async {
-    try {
-      await _repo.deleteCourse(course.id);
-      _load();
-    } on AppException catch (e) {
-      _showSnack(e.message, isError: true);
-    }
-  }
-
-  // ── Build ────────────────────────────────────────────────
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: CustomScrollView(
-        slivers: [
-          _AdminAppBar(
-            courseCount: _courses.length,
-            onAddTap: _goToCreateCourse,
-          ),
-          _buildContent(),
-        ],
+  Future<void> _goToCreateCourse(BuildContext context) async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => BlocProvider.value(
+          value: context.read<AdminCoursesCubit>(),
+          child: const CreateEditCourseScreen(),
+        ),
       ),
     );
   }
 
-  Widget _buildContent() {
-    if (_loadError != null && !_loading) {
+  Future<void> _goToEditCourse(BuildContext context, CourseModel course) async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => BlocProvider.value(
+          value: context.read<AdminCoursesCubit>(),
+          child: CreateEditCourseScreen(course: course),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _goToManageVideos(
+      BuildContext context, CourseModel course) async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => BlocProvider.value(
+          value: context.read<AdminCoursesCubit>(),
+          child: ManageVideosScreen(course: course),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocConsumer<AdminCoursesCubit, AdminCoursesState>(
+      listener: (context, state) {
+        if (state is AdminCoursesActionSuccess) {
+          _showSnack(context, state.message);
+        }
+        if (state is AdminCoursesActionError) {
+          _showSnack(context, state.exception.message, isError: true);
+        }
+      },
+      builder: (context, state) {
+        final courses = switch (state) {
+          AdminCoursesLoaded s => s.courses,
+          AdminCoursesActionLoading s => s.courses,
+          AdminCoursesActionSuccess s => s.courses,
+          AdminCoursesActionError s => s.courses,
+          _ => <CourseModel>[],
+        };
+
+        return Scaffold(
+          backgroundColor: AppColors.background,
+          body: CustomScrollView(
+            slivers: [
+              _AdminAppBar(
+                courseCount: courses.length,
+                onAddTap: () => _goToCreateCourse(context),
+              ),
+              _buildContent(context, state, courses),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildContent(
+      BuildContext context, AdminCoursesState state, List<CourseModel> courses) {
+    // Error state — أول تحميل فشل
+    if (state is AdminCoursesError) {
       return SliverFillRemaining(
-        child: AppErrorWidget(exception: _loadError!, onRetry: _load),
+        child: AppErrorWidget(
+          exception: state.exception,
+          onRetry: () => context.read<AdminCoursesCubit>().fetchCourses(),
+        ),
       );
     }
-    if (_loading) {
+
+    // Loading — أول تحميل
+    if (state is AdminCoursesLoading) {
       return const SliverFillRemaining(
         child: Center(child: CircularProgressIndicator()),
       );
     }
-    if (_courses.isEmpty) {
+
+    // Empty
+    if (courses.isEmpty) {
       return const SliverFillRemaining(child: _EmptyCoursesState());
     }
+
     return SliverPadding(
       padding: const EdgeInsets.all(16),
       sliver: SliverList(
         delegate: SliverChildBuilderDelegate(
-          (_, i) => CourseAdminCard(
-            course: _courses[i],
-            onEdit: () => _goToEditCourse(_courses[i]),
-            onManageVideos: () => _goToManageVideos(_courses[i]),
-            onDelete: () => _deleteCourse(_courses[i]),
-          ),
-          childCount: _courses.length,
+          (_, i) {
+            final course = courses[i];
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: CourseAdminCard(
+                course: course,
+                onEdit: () => _goToEditCourse(context, course),
+                onManageVideos: () => _goToManageVideos(context, course),
+                onDelete: () =>
+                    context.read<AdminCoursesCubit>().deleteCourse(course.id),
+              ),
+            );
+          },
+          childCount: courses.length,
         ),
       ),
     );
   }
 }
 
-// ─────────────────────────────────────────────
-// App Bar
 // ─────────────────────────────────────────────
 class _AdminAppBar extends StatelessWidget {
   final int courseCount;
@@ -162,8 +178,8 @@ class _AdminAppBar extends StatelessWidget {
           Text('Course Manager', style: AppTextStyles.h2),
           Text(
             '$courseCount courses',
-            style:
-                AppTextStyles.caption.copyWith(color: AppColors.textSecondary),
+            style: AppTextStyles.caption
+                .copyWith(color: AppColors.textSecondary),
           ),
         ],
       ),
@@ -173,24 +189,19 @@ class _AdminAppBar extends StatelessWidget {
           child: GestureDetector(
             onTap: onAddTap,
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               decoration: BoxDecoration(
                 color: AppColors.primary,
                 borderRadius: BorderRadius.circular(100),
               ),
-              child: Row(
-                children: [
-                  const Icon(Icons.add_rounded, color: Colors.white, size: 18),
-                  const SizedBox(width: 4),
-                  Text(
-                    'New Course',
+              child: Row(children: [
+                const Icon(Icons.add_rounded, color: Colors.white, size: 18),
+                const SizedBox(width: 4),
+                Text('New Course',
                     style: AppTextStyles.bodySmall.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
+                        color: Colors.white, fontWeight: FontWeight.w600)),
+              ]),
             ),
           ),
         ),
@@ -199,8 +210,6 @@ class _AdminAppBar extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────
-// Empty State
 // ─────────────────────────────────────────────
 class _EmptyCoursesState extends StatelessWidget {
   const _EmptyCoursesState();
@@ -223,11 +232,9 @@ class _EmptyCoursesState extends StatelessWidget {
           const SizedBox(height: 20),
           Text('No courses yet', style: AppTextStyles.h2),
           const SizedBox(height: 8),
-          Text(
-            'Tap "New Course" to get started',
-            style: AppTextStyles.bodyMedium
-                .copyWith(color: AppColors.textSecondary),
-          ),
+          Text('Tap "New Course" to get started',
+              style: AppTextStyles.bodyMedium
+                  .copyWith(color: AppColors.textSecondary)),
         ],
       ),
     );
